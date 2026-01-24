@@ -1,0 +1,247 @@
+# ==============================================================================
+# NEWSFILTERAI - DOCKER COMPOSE CONFIGURATION
+# ==============================================================================
+# 8 сервісів: Traefik, Frontend, Backend, Celery, Telegram Bot, Ngrok, Redis, PostgreSQL
+# ==============================================================================
+
+# version: '3.9'
+name: news_filter_ai
+
+services:
+  dockerproxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: newsfilter_dockerproxy
+    user: root
+    #        privileged: true
+    environment:
+      - CONTAINERS=1
+      - NETWORKS=1
+      - SERVICES=1
+      - TASKS=1
+      - NODES=1
+      - INFO=1
+      - IMAGES=0
+      - VOLUMES=0
+      - POST=0
+      - DELETE=0
+      - VERSION=1
+      - EVENTS=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - newsfilter_network
+    restart: unless-stopped
+
+  # ============================================================================
+  # 1. TRAEFIK - Reverse Proxy
+  # ============================================================================
+  traefik:
+    image: traefik:latest
+    container_name: newsfilter_traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.endpoint=tcp://newsfilter_dockerproxy:2375"
+      - "--entrypoints.web.address=:80"
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    networks:
+      - newsfilter_network
+    depends_on:
+      # Додай це, щоб Traefik чекав на проксі
+      - dockerproxy
+    restart: unless-stopped
+
+  # ============================================================================
+  # 2. FRONTEND - React + Vite
+  # ============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: newsfilter_frontend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.routers.frontend.priority=1"
+      - "traefik.http.services.frontend.loadbalancer.server.port=5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=/api
+    networks:
+      - newsfilter_network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ============================================================================
+  # 3. BACKEND - Django + Gunicorn
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: newsfilter_backend
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py create_superuser &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --reload"
+    labels:
+      - "traefik.enable=true"
+      # API routes
+      - "traefik.http.routers.backend-api.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.backend-api.entrypoints=web"
+      - "traefik.http.routers.backend-api.priority=10"
+      # Admin routes
+      - "traefik.http.routers.backend-admin.rule=PathPrefix(`/admin`)"
+      - "traefik.http.routers.backend-admin.entrypoints=web"
+      - "traefik.http.routers.backend-admin.priority=10"
+      # Static files
+      - "traefik.http.routers.backend-static.rule=PathPrefix(`/static`)"
+      - "traefik.http.routers.backend-static.entrypoints=web"
+      - "traefik.http.routers.backend-static.priority=10"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/staticfiles
+    env_file:
+      - .env
+    networks:
+      - newsfilter_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================================================
+  # 4. CELERY WORKER - Background Tasks (AI Processing)
+  # ============================================================================
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: newsfilter_celery
+    command: celery -A config worker -l INFO --concurrency=2
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    networks:
+      - newsfilter_network
+    depends_on:
+      - backend
+      - redis
+    restart: unless-stopped
+
+  # ============================================================================
+  # 5. TELEGRAM BOT - Aiogram
+  # ============================================================================
+  telegram_bot:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: newsfilter_telegram
+    command: python telegram_bot/main.py
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    networks:
+      - newsfilter_network
+    depends_on:
+      - backend
+      - redis
+      - postgres
+    restart: unless-stopped
+
+  # ============================================================================
+  # 6. NGROK - Tunnel for Telegram Webhook
+  # ============================================================================
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: newsfilter_ngrok
+    command:
+      - "http"
+      - "backend:8000"
+      - "--log=stdout"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040" # Ngrok web interface для перегляду тунелю
+    networks:
+      - newsfilter_network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ============================================================================
+  # 7. REDIS - Message Broker + Cache
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: newsfilter_redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379" # todo: delete for production
+    volumes:
+      - redis_data:/data
+    networks:
+      - newsfilter_network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================================================
+  # 8. POSTGRESQL - Database
+  # ============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: newsfilter_postgres
+    ports:
+      - "5432:5432" # todo: delete for production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    env_file:
+      - .env
+    networks:
+      - newsfilter_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+# ==============================================================================
+# NETWORKS
+# ==============================================================================
+networks:
+  newsfilter_network:
+    driver: bridge
+    name: newsfilter_network
+
+# ==============================================================================
+# VOLUMES
+# ==============================================================================
+volumes:
+  postgres_data:
+    name: newsfilter_postgres_data
+  redis_data:
+    name: newsfilter_redis_data
+  static_volume:
+    name: newsfilter_static

@@ -1,0 +1,109 @@
+version: '3.9'
+
+services:
+  # ============================================================================
+  # 1. FRONTEND
+  # ============================================================================
+  frontend:
+    image: ghcr.io/username/newsfilter-frontend:latest
+    networks:
+      - newsfilter_network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  # ============================================================================
+  # 2. BACKEND API
+  # ============================================================================
+  backend:
+    image: ghcr.io/username/newsfilter-backend:latest
+    # TODO: Команду міграції винести в GitHub Actions або запускати окремо,
+    # щоб не гальмувати старт контейнера при кожному масштабуванні.
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    environment:
+      # TODO: В Swarm секрети треба передавати через Docker Secrets,
+      # для старту env_file чи змінні в Dokploy UI використовуються.
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+    networks:
+      - newsfilter_network
+    deploy:
+      replicas: 2 
+      restart_policy:
+        condition: on-failure
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+
+  # ============================================================================
+  # 3. CELERY WORKER
+  # ============================================================================
+  celery_worker:
+    image: ghcr.io/username/newsfilter-backend:latest # Використовуємо той самий образ, що і бекенд
+    command: celery -A config worker -l INFO --concurrency=2
+    networks:
+      - newsfilter_network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  # ============================================================================
+  # 4. TELEGRAM BOT
+  # ============================================================================
+  telegram_bot:
+    image: ghcr.io/username/newsfilter-backend:latest
+    command: python telegram_bot/main.py
+    networks:
+      - newsfilter_network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  # ============================================================================
+  # 5. REDIS
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - newsfilter_network
+    deploy:
+      mode: global
+
+  # ============================================================================
+  # 6. POSTGRESQL
+  # ============================================================================
+  postgres:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - newsfilter_network
+    deploy:
+      replicas: 1
+
+# ==============================================================================
+# NETWORKS & VOLUMES
+# ==============================================================================
+networks:
+  newsfilter_network:
+    driver: overlay
+    attachable: true
+
+volumes:
+  postgres_data:
+    name: newsfilter_postgres_data
+  redis_data:
+    name: newsfilter_redis_data

@@ -1,0 +1,2 @@
+# Пакет для management commands
+

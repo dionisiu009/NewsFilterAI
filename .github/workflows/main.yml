@@ -1,0 +1,46 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        # Отримання коду з репозиторію
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        # Налаштування середовища для збірки Docker образів
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create .env file
+        # Створення .env файлу з прикладу для CI середовища
+        run: cp .env.example .env
+
+      - name: Build Docker images
+        # Збірка контейнерів за допомогою docker-compose.
+        # Це автоматично встановить усі залежності (pip, npm) всередині образів.
+        run: docker compose build
+
+      - name: Run Backend Tests
+        # Запуск тестів для Django бекенду.
+        # --rm автоматично видаляє контейнер після завершення.
+        run: docker compose run --rm backend pytest
+
+      - name: Run Frontend Tests
+        # Запуск тестів для React фронтенду.
+        # Використовуємо 'npm test', який ми налаштували на запуск 'vitest run'.
+        run: docker compose run --rm frontend npm test
+      
+      # Запускаємо деплой на Dokploy
+      - name: Deploy to Dokploy
+        run: curl -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
+
+      
