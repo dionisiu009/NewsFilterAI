@@ -1,0 +1,56 @@
+name: Build and Publish to GHCR
+
+on:
+  workflow_call:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        # Отримання коду з репозиторію
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        # Налаштування середовища для збірки Docker образів
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lowercase Repo Name
+        # Docker images must be lowercase
+        run: |
+          echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
+      - name: Build and Push Backend Image
+        # Збірка та пуш образу бекенду (використовується також для Celery та Bot)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ghcr.io/${{ env.REPO_LC }}/backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Frontend Image
+        # Збірка та пуш образу фронтенду
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ghcr.io/${{ env.REPO_LC }}/frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Dokploy
+        # Запускаємо деплой на Dokploy (вебхук змусить його завантажити нові images)
+        run: curl -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"

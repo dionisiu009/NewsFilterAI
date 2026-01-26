@@ -69,6 +69,7 @@ services:
       - "traefik.http.routers.frontend.entrypoints=web"
       - "traefik.http.routers.frontend.priority=1"
       - "traefik.http.services.frontend.loadbalancer.server.port=5173"
+    image: ghcr.io/dionisiu09/newsfilterai/frontend:latest
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -107,6 +108,7 @@ services:
       - "traefik.http.routers.backend-static.entrypoints=web"
       - "traefik.http.routers.backend-static.priority=10"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
+    image: ghcr.io/dionisiu09/newsfilterai/backend:latest
     volumes:
       - ./backend:/app
       - static_volume:/app/staticfiles
@@ -129,6 +131,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: newsfilter_celery
+    image: ghcr.io/dionisiu09/newsfilterai/backend:latest
     command: celery -A config worker -l INFO --concurrency=2
     volumes:
       - ./backend:/app
@@ -149,6 +152,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: newsfilter_telegram
+    image: ghcr.io/dionisiu09/newsfilterai/backend:latest
     command: python telegram_bot/main.py
     volumes:
       - ./backend:/app

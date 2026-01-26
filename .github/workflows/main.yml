@@ -11,6 +11,10 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-latest
     
+    # Дозволи для читання вмісту
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout code
         # Отримання коду з репозиторію
@@ -24,23 +28,21 @@ jobs:
         # Створення .env файлу з прикладу для CI середовища
         run: cp .env.example .env
 
-      - name: Build Docker images
-        # Збірка контейнерів за допомогою docker-compose.
-        # Це автоматично встановить усі залежності (pip, npm) всередині образів.
+      - name: Build Docker images for Testing
+        # Збірка контейнерів для тестів
         run: docker compose build
 
       - name: Run Backend Tests
-        # Запуск тестів для Django бекенду.
-        # --rm автоматично видаляє контейнер після завершення.
+        # Запуск тестів для Django бекенду
         run: docker compose run --rm backend pytest
 
       - name: Run Frontend Tests
-        # Запуск тестів для React фронтенду.
-        # Використовуємо 'npm test', який ми налаштували на запуск 'vitest run'.
+        # Запуск тестів для React фронтенду
         run: docker compose run --rm frontend npm test
-      
-      # Запускаємо деплой на Dokploy
-      - name: Deploy to Dokploy
-        run: curl -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
 
-      
+  deploy:
+    name: Build and Deploy
+    needs: test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    uses: ./.github/workflows/build_GHCR.yml
+    secrets: inherit      
