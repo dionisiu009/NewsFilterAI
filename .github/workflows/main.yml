@@ -2,19 +2,24 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ "main", "master" ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  test:
-    name: Run Tests
+  # ============================================================================
+  # 1. BUILD CANDIDATE - Збірка та пуш образів з SHA тегом
+  # ============================================================================
+  build-and-push-sha:
+    name: Build & Push Candidate
     runs-on: ubuntu-latest
-    
-    # Дозволи для читання вмісту
     permissions:
       contents: read
-
+      packages: write
     steps:
       - name: Checkout code
         # Отримання коду з репозиторію
@@ -24,30 +29,126 @@ jobs:
         # Налаштування середовища для збірки Docker образів
         uses: docker/setup-buildx-action@v3
 
-      - name: Create .env file
-        # Створення .env файлу з прикладу для CI середовища
-        run: cp .env.example .env
+      - name: Log in to GitHub Container Registry
+        # Логін для можливості пушити образи
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker images for Testing
-        # Збірка контейнерів для тестів
-        run: docker compose build
+      - name: Lowercase Repo Name
+        # Приведення імені репозиторію до нижнього регістру (вимога Docker)
+        run: |
+          echo "IMAGE_NAME_LC=${IMAGE_NAME,,}" >> ${GITHUB_ENV}
+
+      - name: Build and Push Backend (Candidate)
+        # Збірка backend образу та пуш з тегом sha-<commit_hash>
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}/backend:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Frontend (Candidate)
+        # Збірка frontend образу та пуш з тегом sha-<commit_hash>
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}/frontend:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================================
+  # 2. TEST CANDIDATE - Запуск тестів на зібраних образах
+  # ============================================================================
+  test:
+    name: Test Candidate
+    needs: build-and-push-sha
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        # Логін щоб скачати (pull) свіжі образи
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create .env file
+        # Створення .env для тестів
+        run: cp .env.example .env
+      
+      - name: Lowercase Repo Name
+        run: |
+          echo "IMAGE_NAME_LC=${IMAGE_NAME,,}" >> ${GITHUB_ENV}
+
+      - name: Pull Candidate Images
+        # Скачування саме тих образів, що ми зібрали крок назад
+        env:
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: |
+           docker compose pull backend frontend
 
       - name: Run Backend Tests
-        # Запуск тестів для Django бекенду
-        run: docker compose run --rm backend pytest
+        # Запуск тестів використовучи вже зібраний образ (no-build)
+        env:
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: docker compose run --rm --no-build backend pytest
 
       - name: Run Frontend Tests
-        # Запуск тестів для React фронтенду
-        run: docker compose run --rm frontend npm test
+        # Запуск frontend тестів
+        env:
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: docker compose run --rm --no-build frontend npm test
 
+  # ============================================================================
+  # 3. PROMOTE & DEPLOY - Тегування як 'latest' та деплой
+  # ============================================================================
   deploy:
-    name: Build and Deploy
+    name: Promote & Deploy
     needs: test
+    # Запускати тільки якщо це пуш в main/master (ігнорувати PR)
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    uses: ./.github/workflows/build_GHCR.yml
-    secrets: inherit
+      - name: Lowercase Repo Name
+        run: |
+          echo "IMAGE_NAME_LC=${IMAGE_NAME,,}" >> ${GITHUB_ENV}
+
+      - name: Promote Backend to Latest
+        # Замість перебудови, ми просто ставимо тег 'latest' на існуючий образ sha-...
+        # Це миттєво і гарантує, що деплоїться те саме, що тестувалось
+        run: |
+           docker buildx imagetools create \
+             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}/backend:latest \
+             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}/backend:sha-${{ github.sha }}
+
+      - name: Promote Frontend to Latest
+        run: |
+           docker buildx imagetools create \
+             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}/frontend:latest \
+             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}/frontend:sha-${{ github.sha }}
+
+      - name: Trigger Deployment Webhook
+        # Виклик вебхука для оновлення на проді
+        run: curl --fail --retry 5 --retry-delay 15 --retry-connrefused -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
