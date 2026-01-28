@@ -44,5 +44,10 @@ jobs:
     name: Build and Deploy
     needs: test
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    permissions:
+      contents: read
+      packages: write
+
     uses: ./.github/workflows/build_GHCR.yml
-    secrets: inherit      
+    secrets: inherit
