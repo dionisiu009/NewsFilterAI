@@ -12,20 +12,24 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.newsfilter-frontend.rule=Host(`newsfilterai.pp.ua`)"
+        - "traefik.http.routers.newsfilter-frontend.entrypoints=web"
+        - "traefik.http.services.newsfilter-frontend.loadbalancer.server.port=5173"
+
 
   # ============================================================================
   # 2. BACKEND API
   # ============================================================================
   backend:
     image: ghcr.io/dionisiu009/newsfilterai/backend:latest
-    # TODO: Команду міграції винести в GitHub Actions або запускати окремо,
-    # щоб не гальмувати старт контейнера при кожному масштабуванні.
+    # TODO: Команду міграції винести в GitHub Actions або запускати окремо, щоб не гальмувати старт контейнера при кожному масштабуванні.
     command: >
       sh -c "python manage.py migrate --noinput &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
     environment:
-      # TODO: В Swarm секрети треба передавати через Docker Secrets,
-      # для старту env_file чи змінні в Dokploy UI використовуються.
+      # TODO: В Swarm секрети треба передавати через Docker Secrets, для старту env_file чи змінні в Dokploy UI (використовуються).
       - POSTGRES_HOST=postgres
       - REDIS_HOST=redis
     networks:
@@ -38,6 +42,23 @@ services:
         parallelism: 1
         delay: 10s
         order: start-first
+      labels:
+        - "traefik.enable=true"
+        # API
+        - "traefik.http.routers.newsfilter-backend-api.rule=Host(`newsfilterai.pp.ua`) && PathPrefix(`/api`)"
+        - "traefik.http.routers.newsfilter-backend-api.entrypoints=web"
+        - "traefik.http.routers.newsfilter-backend-api.priority=10"
+        # Admin
+        - "traefik.http.routers.newsfilter-backend-admin.rule=Host(`newsfilterai.pp.ua`) && PathPrefix(`/admin`)"
+        - "traefik.http.routers.newsfilter-backend-admin.entrypoints=web"
+        - "traefik.http.routers.newsfilter-backend-admin.priority=10"
+        # Static
+        - "traefik.http.routers.newsfilter-backend-static.rule=Host(`newsfilterai.pp.ua`) && PathPrefix(`/static`)"
+        - "traefik.http.routers.newsfilter-backend-static.entrypoints=web"
+        - "traefik.http.routers.newsfilter-backend-static.priority=10"
+        # Port
+        - "traefik.http.services.newsfilter-backend.loadbalancer.server.port=8000"
+
 
   # ============================================================================
   # 3. CELERY WORKER
