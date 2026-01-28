@@ -7,7 +7,7 @@ services:
   frontend:
     image: ghcr.io/dionisiu009/newsfilterai/frontend:latest
     networks:
-      - newsfilter_network
+      - dokploy-network
     deploy:
       replicas: 1
       restart_policy:
@@ -17,6 +17,7 @@ services:
         - "traefik.http.routers.newsfilter-frontend.rule=Host(`newsfilterai.pp.ua`)"
         - "traefik.http.routers.newsfilter-frontend.entrypoints=web"
         - "traefik.http.services.newsfilter-frontend.loadbalancer.server.port=5173"
+        - "traefik.docker.network=dokploy-network"
 
 
   # ============================================================================
@@ -33,6 +34,7 @@ services:
       - POSTGRES_HOST=postgres
       - REDIS_HOST=redis
     networks:
+      - dokploy-network
       - newsfilter_network
     deploy:
       replicas: 2 
@@ -58,6 +60,7 @@ services:
         - "traefik.http.routers.newsfilter-backend-static.priority=10"
         # Port
         - "traefik.http.services.newsfilter-backend.loadbalancer.server.port=8000"
+        - "traefik.docker.network=dokploy-network"
 
 
   # ============================================================================
@@ -122,6 +125,8 @@ networks:
   newsfilter_network:
     driver: overlay
     attachable: true
+  dokploy-network:
+    external: true
 
 volumes:
   postgres_data:
