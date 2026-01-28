@@ -5,7 +5,7 @@ services:
   # 1. FRONTEND
   # ============================================================================
   frontend:
-    image: ghcr.io/dionisiu09/newsfilterai/frontend:latest
+    image: ghcr.io/dionisiu009/newsfilterai/frontend:latest
     networks:
       - newsfilter_network
     deploy:
@@ -17,7 +17,7 @@ services:
   # 2. BACKEND API
   # ============================================================================
   backend:
-    image: ghcr.io/dionisiu09/newsfilterai/backend:latest
+    image: ghcr.io/dionisiu009/newsfilterai/backend:latest
     # TODO: Команду міграції винести в GitHub Actions або запускати окремо,
     # щоб не гальмувати старт контейнера при кожному масштабуванні.
     command: >
@@ -43,7 +43,7 @@ services:
   # 3. CELERY WORKER
   # ============================================================================
   celery_worker:
-    image: ghcr.io/dionisiu09/newsfilterai/backend:latest # Використовуємо той самий образ, що і бекенд
+    image: ghcr.io/dionisiu009/newsfilterai/backend:latest
     command: celery -A config worker -l INFO --concurrency=2
     networks:
       - newsfilter_network
@@ -56,7 +56,7 @@ services:
   # 4. TELEGRAM BOT
   # ============================================================================
   telegram_bot:
-    image: ghcr.io/dionisiu09/newsfilterai/backend:latest
+    image: ghcr.io/dionisiu009/newsfilterai/backend:latest
     command: python telegram_bot/main.py
     networks:
       - newsfilter_network
