@@ -5,11 +5,10 @@ from django.core.cache import caches
 
 
 @pytest.fixture(scope="session")
-def django_db_setup():
-    settings.DATABASES["default"] = {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.path.join(settings.BASE_DIR, "test_db.sqlite3"),
-    }
+def django_db_setup(django_db_setup, django_db_blocker):
+    with django_db_blocker.unblock():
+        from django.core.management import call_command
+        call_command("migrate", "--run-syncdb")
 
 
 @pytest.fixture(autouse=True)
