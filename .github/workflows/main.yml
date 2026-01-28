@@ -100,16 +100,16 @@ jobs:
            docker compose pull backend frontend
 
       - name: Run Backend Tests
-        # Запуск тестів використовучи вже зібраний образ (no-build)
+        # Запуск тестів (використовуємо docker compose run без explicit no-build для сумісності)
         env:
           IMAGE_TAG: sha-${{ github.sha }}
-        run: docker compose run --rm --no-build backend pytest
+        run: docker compose run --rm backend pytest
 
       - name: Run Frontend Tests
         # Запуск frontend тестів
         env:
           IMAGE_TAG: sha-${{ github.sha }}
-        run: docker compose run --rm --no-build frontend npm test
+        run: docker compose run --rm frontend npm test
 
   # ============================================================================
   # 3. PROMOTE & DEPLOY - Тегування як 'latest' та деплой

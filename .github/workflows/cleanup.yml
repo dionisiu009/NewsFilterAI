@@ -1,0 +1,29 @@
+name: Cleanup Old Images
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Запуск щопонеділка о 00:00 UTC
+  workflow_dispatch:    # Можливість запустити вручну кнопку
+
+jobs:
+  cleanup:
+    name: Delete Old Package Versions
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Delete old backend images
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: 'newsfilterai/backend'
+          package-type: 'container'
+          min-versions-to-keep: 5
+          ignore-versions: '^(latest)$' # Ніколи не видаляти latest
+
+      - name: Delete old frontend images
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: 'newsfilterai/frontend'
+          package-type: 'container'
+          min-versions-to-keep: 5
+          ignore-versions: '^(latest)$'
