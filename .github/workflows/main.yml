@@ -148,5 +148,5 @@ jobs:
              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}/frontend:sha-${{ github.sha }}
 
       - name: Trigger Deployment Webhook
-        # Виклик вебхука для оновлення на проді
-        run: curl --fail --retry 5 --retry-delay 15 --retry-connrefused -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
+        # Виклик вебхука (прибираємо --fail щоб бачити текст помилки при 400)
+        run: curl --retry 5 --retry-delay 15 --retry-connrefused -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}" # --retry or --fail
