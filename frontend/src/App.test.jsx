@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import * as useNewsCheckHook from './hooks/useNewsCheck';
@@ -39,7 +39,7 @@ describe('App Component Integration Tests', () => {
     it('renders initial state correctly (IDLE)', () => {
         render(<App />);
 
-        expect(screen.getByText(/NewsFilter AI/i)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /NewsFilter AI/i })).toBeInTheDocument();
         expect(screen.getByPlaceholderText(/Вставте URL новини/i)).toBeInTheDocument();
         expect(screen.getByText(/Як це працює?/i)).toBeInTheDocument();
     });
@@ -57,8 +57,10 @@ describe('App Component Integration Tests', () => {
         const input = screen.getByPlaceholderText(/Вставте URL новини/i);
         const submitButton = screen.getByRole('button', { name: /Перевірити/i });
 
-        await user.type(input, 'https://example.com/news');
-        await user.click(submitButton);
+        await act(async () => {
+            await user.type(input, 'https://example.com/news');
+            await user.click(submitButton);
+        });
 
         expect(checkMock).toHaveBeenCalledWith('https://example.com/news');
     });
@@ -76,9 +78,9 @@ describe('App Component Integration Tests', () => {
         expect(screen.getByText(/Завантаження.../i)).toBeInTheDocument();
         expect(screen.getByText(/Час очікування: 2с/i)).toBeInTheDocument();
 
-        // Переконуємось, що форма та лендінг приховані
+        // Переконуємось, що лендінг прихований, а форма заблокована
         expect(screen.queryByText(/Як це працює?/i)).not.toBeInTheDocument();
-        expect(screen.queryByPlaceholderText(/Вставте URL новини/i)).not.toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Вставте URL новини/i)).toBeDisabled();
     });
 
     it('displays success result correctly', () => {

@@ -52,5 +52,4 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Deploy to Dokploy
-        # Запускаємо деплой на Dokploy (вебхук змусить його завантажити нові images)
-        run: curl -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
+        run: curl --fail --retry 5 --retry-delay 15 --retry-connrefused -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
