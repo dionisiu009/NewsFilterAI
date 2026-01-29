@@ -137,6 +137,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - BACKEND_API_URL=${BACKEND_API_URL}
     networks:
+      - dokploy-network
       - newsfilter_network
     deploy:
       replicas: 1
