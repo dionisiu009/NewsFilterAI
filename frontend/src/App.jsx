@@ -9,13 +9,22 @@ import {
   LoadingIndicator,
   ResultCard,
   ErrorMessage,
-  DebugToggle
+  DebugToggle,
+  InfoPage,
+  DisinfoCards
 } from './components';
+import { pagesContent } from './data/disinfoContent';
 import { useNewsCheck, CheckStatus } from './hooks/useNewsCheck';
 import './App.css';
 
 function App() {
   const [debugEnabled, setDebugEnabled] = useState(false);
+  const [currentView, setCurrentView] = useState('home');
+
+  const handleCardClick = (id) => {
+    setCurrentView(id);
+  };
+
 
   const {
     status,
@@ -64,46 +73,60 @@ function App() {
 
       case CheckStatus.IDLE:
       default:
-        return (
-          <div className="features">
-            <h2 className="features-title">🚀 Як це працює?</h2>
-            <div className="features-grid">
-              <div className="feature-card">
-                <span className="feature-icon">🔗</span>
-                <h3>Вставте посилання</h3>
-                <p>Скопіюйте URL новини, яку хочете перевірити</p>
+        if (currentView === 'home') {
+          return (
+            <div className="features">
+              <h2 className="features-title">🚀 Як це працює?</h2>
+              <div className="features-grid">
+                <div className="feature-card">
+                  <span className="feature-icon">🔗</span>
+                  <h3>Вставте посилання</h3>
+                  <p>Скопіюйте URL новини, яку хочете перевірити</p>
+                </div>
+                <div className="feature-card">
+                  <span className="feature-icon">🤖</span>
+                  <h3>AI аналізує</h3>
+                  <p>Штучний інтелект перевіряє факти та джерело</p>
+                </div>
+                <div className="feature-card">
+                  <span className="feature-icon">✅</span>
+                  <h3>Отримайте результат</h3>
+                  <p>Дізнайтеся чи можна довіряти цій новині</p>
+                </div>
               </div>
-              <div className="feature-card">
-                <span className="feature-icon">🤖</span>
-                <h3>AI аналізує</h3>
-                <p>Штучний інтелект перевіряє факти та джерело</p>
-              </div>
-              <div className="feature-card">
-                <span className="feature-icon">✅</span>
-                <h3>Отримайте результат</h3>
-                <p>Дізнайтеся чи можна довіряти цій новині</p>
-              </div>
-            </div>
 
-            <div className="stats-section">
-              <h3 className="stats-title">📊 Вердикти</h3>
-              <div className="verdict-examples">
-                <div className="verdict-example verdict-example--true">
-                  <span>✅</span> Достовірна
-                </div>
-                <div className="verdict-example verdict-example--false">
-                  <span>🔴</span> Фейк
-                </div>
-                <div className="verdict-example verdict-example--partial">
-                  <span>🟡</span> Частково правда
-                </div>
-                <div className="verdict-example verdict-example--unknown">
-                  <span>❓</span> Неможливо перевірити
+              <DisinfoCards onCardClick={handleCardClick} />
+
+              <div className="stats-section">
+                <h3 className="stats-title">📊 Вердикти</h3>
+                <div className="verdict-examples">
+                  <div className="verdict-example verdict-example--true">
+                    <span>✅</span> Достовірна
+                  </div>
+                  <div className="verdict-example verdict-example--false">
+                    <span>🔴</span> Фейк
+                  </div>
+                  <div className="verdict-example verdict-example--partial">
+                    <span>🟡</span> Частково правда
+                  </div>
+                  <div className="verdict-example verdict-example--unknown">
+                    <span>❓</span> Неможливо перевірити
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        );
+          );
+        } else {
+          const page = pagesContent[currentView];
+          return (
+            <InfoPage
+              title={page?.title}
+              content={page?.content}
+              imageIcon={page?.icon}
+              onBack={() => setCurrentView('home')}
+            />
+          );
+        }
     }
   };
 
@@ -112,8 +135,9 @@ function App() {
       <Header />
 
       <main className="app-main">
-        {/* Форма завжди видима, крім моменту коли є результат */}
-        {status !== CheckStatus.SUCCESS && status !== CheckStatus.ERROR && (
+        {/* Форма завжди видима, крім моменту коли є результат АБО ми на сторінці інфо */}
+        {status !== CheckStatus.SUCCESS && status !== CheckStatus.ERROR && currentView === 'home' && (
+
           <UrlInputForm
             onSubmit={handleSubmit}
             isLoading={isLoading}

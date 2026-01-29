@@ -6,3 +6,5 @@ export { default as ResultCard } from './ResultCard';
 export { default as ErrorMessage } from './ErrorMessage';
 export { default as DebugToggle } from './DebugToggle';
 export { default as DebugInfo } from './DebugInfo';
+export { InfoPage } from './InfoPage';
+export { DisinfoCards } from './DisinfoCards';
