@@ -46,6 +46,8 @@ services:
     networks:
       - dokploy-network
       - newsfilter_network
+    dns:
+      - 8.8.8.8
     deploy:
       replicas: 2 
       restart_policy:
@@ -92,7 +94,6 @@ services:
       - REDIS_URL=${REDIS_URL}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
     networks:
-      - dokploy-network
       - newsfilter_network
     deploy:
       replicas: 1
@@ -136,9 +137,12 @@ services:
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - BACKEND_API_URL=${BACKEND_API_URL}
+      - USE_WEBHOOK=true
+      - WEBHOOK_URL=https://newsfilterai.pp.ua
     networks:
-      - dokploy-network
       - newsfilter_network
+    dns:
+      - 8.8.8.8
     deploy:
       replicas: 1
       restart_policy:
