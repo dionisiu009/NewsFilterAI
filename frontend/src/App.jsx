@@ -75,46 +75,48 @@ function App() {
       default:
         if (currentView === 'home') {
           return (
-            <div className="features">
-              <h2 className="features-title">🚀 Як це працює?</h2>
-              <div className="features-grid">
-                <div className="feature-card">
-                  <span className="feature-icon">🔗</span>
-                  <h3>Вставте посилання</h3>
-                  <p>Скопіюйте URL новини, яку хочете перевірити</p>
+            <>
+              <div className="features">
+                <h2 className="features-title">🚀 Як це працює?</h2>
+                <div className="features-grid">
+                  <div className="feature-card">
+                    <span className="feature-icon">🔗</span>
+                    <h3>Вставте посилання</h3>
+                    <p>Скопіюйте URL новини, яку хочете перевірити</p>
+                  </div>
+                  <div className="feature-card">
+                    <span className="feature-icon">🤖</span>
+                    <h3>AI аналізує</h3>
+                    <p>Штучний інтелект перевіряє факти та джерело</p>
+                  </div>
+                  <div className="feature-card">
+                    <span className="feature-icon">✅</span>
+                    <h3>Отримайте результат</h3>
+                    <p>Дізнайтеся чи можна довіряти цій новині</p>
+                  </div>
                 </div>
-                <div className="feature-card">
-                  <span className="feature-icon">🤖</span>
-                  <h3>AI аналізує</h3>
-                  <p>Штучний інтелект перевіряє факти та джерело</p>
-                </div>
-                <div className="feature-card">
-                  <span className="feature-icon">✅</span>
-                  <h3>Отримайте результат</h3>
-                  <p>Дізнайтеся чи можна довіряти цій новині</p>
+
+                <div className="stats-section">
+                  <h3 className="stats-title">📊 Вердикти</h3>
+                  <div className="verdict-examples">
+                    <div className="verdict-example verdict-example--true">
+                      <span>✅</span> Достовірна
+                    </div>
+                    <div className="verdict-example verdict-example--false">
+                      <span>🔴</span> Фейк
+                    </div>
+                    <div className="verdict-example verdict-example--partial">
+                      <span>🟡</span> Частково правда
+                    </div>
+                    <div className="verdict-example verdict-example--unknown">
+                      <span>❓</span> Неможливо перевірити
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <DisinfoCards onCardClick={handleCardClick} />
-
-              <div className="stats-section">
-                <h3 className="stats-title">📊 Вердикти</h3>
-                <div className="verdict-examples">
-                  <div className="verdict-example verdict-example--true">
-                    <span>✅</span> Достовірна
-                  </div>
-                  <div className="verdict-example verdict-example--false">
-                    <span>🔴</span> Фейк
-                  </div>
-                  <div className="verdict-example verdict-example--partial">
-                    <span>🟡</span> Частково правда
-                  </div>
-                  <div className="verdict-example verdict-example--unknown">
-                    <span>❓</span> Неможливо перевірити
-                  </div>
-                </div>
-              </div>
-            </div>
+            </>
           );
         } else {
           const page = pagesContent[currentView];

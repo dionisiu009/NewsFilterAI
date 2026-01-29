@@ -34,8 +34,10 @@ export function DisinfoCards({ onCardClick }) {
                         onClick={() => onCardClick(card.id)}
                     >
                         <div className="disinfo-icon">{card.icon}</div>
-                        <h3>{card.title}</h3>
-                        <p>{card.desc}</p>
+                        <div className="disinfo-content-wrapper">
+                            <h3>{card.title}</h3>
+                            <p>{card.desc}</p>
+                        </div>
                     </div>
                 ))}
             </div>
