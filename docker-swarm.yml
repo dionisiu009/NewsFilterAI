@@ -29,7 +29,7 @@ services:
     environment:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - DJANGO_DEBUG=${DJANGO_DEBUG}
-      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS},newsfilterai.pp.ua
       - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME}
       - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL}
       - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD}
@@ -85,7 +85,7 @@ services:
     environment:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - DJANGO_DEBUG=${DJANGO_DEBUG}
-      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS},newsfilterai.pp.ua
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -140,6 +140,7 @@ services:
       - USE_WEBHOOK=true
       - WEBHOOK_URL=https://newsfilterai.pp.ua
     networks:
+      - dokploy-network
       - newsfilter_network
     dns:
       - 8.8.8.8
@@ -147,6 +148,12 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.telegram-bot.rule=Host(`newsfilterai.pp.ua`) && PathPrefix(`/api/telegram/webhook/`)"
+        - "traefik.http.routers.telegram-bot.entrypoints=web"
+        - "traefik.http.services.telegram-bot.loadbalancer.server.port=8001"
+        - "traefik.docker.network=dokploy-network"
 
   # ============================================================================
   # 5. REDIS

@@ -20,6 +20,8 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from aiohttp import web
 from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.enums import ParseMode
@@ -721,11 +723,9 @@ async def main() -> None:
         print("   Додайте токен бота в .env файл.")
         return
 
-    # Реєструємо lifecycle handlers
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
-    # Перевіряємо чи використовувати webhook режим
     if USE_WEBHOOK:
         target_url = None
         
@@ -741,12 +741,28 @@ async def main() -> None:
             if webhook_success:
                 print("✅ Webhook режим активовано!")
                 print(f"🌐 Публічний URL: {target_url}")
-                # В webhook режимі бот не потребує polling
-                # Оновлення приходять через HTTP endpoint в Django
-                print("📭 Бот очікує оновлень через webhook...")
-                # Тримаємо процес живим
-                while True:
-                    await asyncio.sleep(3600)
+                print("📭 Запускаю веб-сервер для Webhook...")
+                
+                app = web.Application()
+                
+                webhook_requests_handler = SimpleRequestHandler(
+                    dispatcher=dp,
+                    bot=bot,
+                )
+                
+                webhook_requests_handler.register(app, path="/api/telegram/webhook/")
+                
+                setup_application(app, dp, bot=bot)
+                
+                runner = web.AppRunner(app)
+                await runner.setup()
+                site = web.TCPSite(runner, host="0.0.0.0", port=8001)
+                await site.start()
+                
+                print("🚀 Webhook сервер запущено на порту 8001")
+                
+
+                await asyncio.Event().wait()
             else:
                 print("⚠️ Не вдалося налаштувати webhook, перемикаюсь на polling...")
                 await bot.delete_webhook(drop_pending_updates=True)
@@ -757,10 +773,8 @@ async def main() -> None:
             await dp.start_polling(bot)
     else:
         print("🔄 Режим: Long Polling")
-        # Видаляємо webhook якщо був
         await bot.delete_webhook(drop_pending_updates=True)
         print("✅ Бот готовий до роботи!")
-        # Запускаємо polling
         await dp.start_polling(bot)
 
 
