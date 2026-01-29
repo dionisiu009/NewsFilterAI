@@ -98,15 +98,12 @@ services:
       # API routes
       - "traefik.http.routers.backend-api.rule=PathPrefix(`/api`)"
       - "traefik.http.routers.backend-api.entrypoints=web"
-      - "traefik.http.routers.backend-api.priority=10"
       # Admin routes
       - "traefik.http.routers.backend-admin.rule=PathPrefix(`/admin`)"
       - "traefik.http.routers.backend-admin.entrypoints=web"
-      - "traefik.http.routers.backend-admin.priority=10"
       # Static files
       - "traefik.http.routers.backend-static.rule=PathPrefix(`/static`)"
       - "traefik.http.routers.backend-static.entrypoints=web"
-      - "traefik.http.routers.backend-static.priority=10"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
     image: ghcr.io/dionisiu009/newsfilterai/backend:${IMAGE_TAG:-latest}
     volumes:

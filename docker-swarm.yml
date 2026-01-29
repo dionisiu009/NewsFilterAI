@@ -46,8 +46,7 @@ services:
     networks:
       - dokploy-network
       - newsfilter_network
-    dns:
-      - 8.8.8.8
+
     deploy:
       replicas: 2 
       restart_policy:
@@ -61,15 +60,12 @@ services:
         # API
         - "traefik.http.routers.newsfilter-backend-api.rule=Host(`newsfilterai.pp.ua`) && PathPrefix(`/api`)"
         - "traefik.http.routers.newsfilter-backend-api.entrypoints=web"
-        - "traefik.http.routers.newsfilter-backend-api.priority=50"
         # Admin
         - "traefik.http.routers.newsfilter-backend-admin.rule=Host(`newsfilterai.pp.ua`) && PathPrefix(`/admin`)"
         - "traefik.http.routers.newsfilter-backend-admin.entrypoints=web"
-        - "traefik.http.routers.newsfilter-backend-admin.priority=50"
         # Static
         - "traefik.http.routers.newsfilter-backend-static.rule=Host(`newsfilterai.pp.ua`) && PathPrefix(`/static`)"
         - "traefik.http.routers.newsfilter-backend-static.entrypoints=web"
-        - "traefik.http.routers.newsfilter-backend-static.priority=50"
         # Port
         - "traefik.http.services.newsfilter-backend.loadbalancer.server.port=8000"
         - "traefik.docker.network=dokploy-network"
@@ -142,17 +138,14 @@ services:
     networks:
       - dokploy-network
       - newsfilter_network
-    dns:
-      - 8.8.8.8
+
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
       labels:
-        - "traefik.enable=true"
         - "traefik.http.routers.telegram-bot.rule=Host(`newsfilterai.pp.ua`) && PathPrefix(`/api/telegram/webhook/`)"
         - "traefik.http.routers.telegram-bot.entrypoints=web"
-        - "traefik.http.routers.telegram-bot.priority=60"
         - "traefik.http.services.telegram-bot.loadbalancer.server.port=8001"
         - "traefik.docker.network=dokploy-network"
 

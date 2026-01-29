@@ -38,7 +38,7 @@ WEBHOOK_URL = os.getenv('WEBHOOK_URL', None)
 
 # Таймаути для HTTP запитів (секунди)
 REQUEST_TIMEOUT = 30
-POLLING_TIMEOUT = 60  # Максимальний час очікування результату
+POLLING_TIMEOUT = 150  # Максимальний час очікування результату
 POLLING_INTERVAL = 2  # Інтервал між запитами статусу
 
 # Ініціалізація бота та диспетчера

@@ -240,18 +240,62 @@
 @media (max-width: 600px) {
   .result-card {
     padding: 1.5rem 1rem;
+    border-left-width: 3px;
+  }
+
+  .result-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .verdict-badge {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .verdict-emoji {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
   }
 
   .verdict-text {
-    font-size: 1.125rem;
+    font-size: 1.25rem;
+  }
+
+  .cache-badge {
+    align-self: flex-start;
+    margin-left: 0.5rem;
+  }
+
+  .result-info {
+    gap: 0.75rem;
   }
 
   .info-item {
     padding: 0.75rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .info-icon {
+    font-size: 1.125rem;
+    opacity: 0.7;
+  }
+
+  .info-content {
+    width: 100%;
+  }
+
+  .confidence-bar-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .confidence-value {
+    text-align: left;
+    font-size: 0.875rem;
   }
 }
 

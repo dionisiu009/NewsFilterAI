@@ -144,13 +144,32 @@
     padding: 1.5rem 1rem;
   }
 
+  .input-container {
+    padding: 0.25rem;
+  }
+
   .url-input {
-    font-size: 0.875rem;
+    font-size: 0.95rem;
+    padding: 0.75rem 0.25rem;
+  }
+
+  .input-icon {
+    display: none;
+    /* Try removing icon on very small screens if needed, or keep smaller */
   }
 
   .submit-button {
     font-size: 1rem;
-    padding: 0.875rem 1.5rem;
+    padding: 1rem;
   }
 }
 
+@media (max-width: 400px) {
+  .input-icon {
+    display: none;
+  }
+
+  .url-input {
+    padding-left: 0.5rem;
+  }
+}

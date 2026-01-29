@@ -16,7 +16,7 @@ import os
 from django.conf import settings
 from google.genai import types
 
-from .constants import MAX_CONTENT_LENGTH
+from .constants import MAX_CONTENT_LENGTH, AI_REQUEST_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ class GeminiAIService:
                 temperature=0.1,  # Низька температура для стабільних відповідей
                 top_p=0.95,
                 top_k=40,
-                max_output_tokens=2048,  # Достатньо для структурованої відповіді
+                max_output_tokens=4096,  # Достатньо для детальної відповіді
             )
         except Exception:
             # Якщо types не доступний (наприклад у тестах), дозволяємо None
@@ -271,7 +271,7 @@ class GeminiAIService:
                     logger.info(f"Спроба отримати аналіз від моделі: {model_attempt}")
                     
                     # Викликаємо раннер
-                    raw_response = self.run_gemini_subprocess(prompt, model_name=model_attempt, timeout=90, max_output_tokens=2048)
+                    raw_response = self.run_gemini_subprocess(prompt, model_name=model_attempt, timeout=AI_REQUEST_TIMEOUT, max_output_tokens=4096)
                     if raw_response:
                         logger.info(f"✅ Успішно отримано результат від {model_attempt}")
                         break # Успіх!
