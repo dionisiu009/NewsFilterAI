@@ -7,30 +7,8 @@
     overflow-x: hidden;
 }
 
-/* Background elements for atmosphere */
-.info-page::before {
-    content: '';
-    position: absolute;
-    top: -10%;
-    left: -10%;
-    width: 50%;
-    height: 50%;
-    background: radial-gradient(circle, rgba(0, 212, 255, 0.08) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-}
 
-.info-page::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    right: -10%;
-    width: 60%;
-    height: 60%;
-    background: radial-gradient(circle, rgba(123, 44, 191, 0.08) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-}
+/* Background elements removed to fix transparency issue */
 
 /* Back Button */
 .back-button-wrapper {
