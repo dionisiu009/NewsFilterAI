@@ -145,7 +145,8 @@ services:
         condition: on-failure
       labels:
         - "traefik.http.routers.telegram-bot.rule=Host(`newsfilterai.pp.ua`) && PathPrefix(`/api/telegram/webhook/`)"
-        - "traefik.http.routers.telegram-bot.entrypoints=web"
+        - "traefik.http.routers.telegram-bot.priority=100"
+        - "traefik.http.routers.telegram-bot.entrypoints=web,websecure"
         - "traefik.http.services.telegram-bot.loadbalancer.server.port=8001"
         - "traefik.docker.network=dokploy-network"
 
