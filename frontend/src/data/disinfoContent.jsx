@@ -1,6 +1,5 @@
-
-import React from 'react';
-import textHeroImage from '../assets/text_disinfo_hero.png';
+import deepfakeHeroImage from '../assets/deepfake_disinfo_hero.png';
+import familyHeroImage from '../assets/family_disinfo_hero.png';
 
 export const pagesContent = {
     text: {
@@ -71,36 +70,62 @@ export const pagesContent = {
     deepfake: {
         title: 'Як виявити діпфейки (зображення)',
         icon: '🎭',
+        heroImage: deepfakeHeroImage,
         content: (
             <>
                 <section className="info-section">
-                    <h2>Шерлок Холмс у світі пікселів</h2>
+                    <h2>🕵️ Шерлок Холмс у світі пікселів</h2>
                     <p>
-                        Навіть найсучасніші нейромережі (Midjourney, DALL-E) залишають «цифрові відбитки». Ось 5 головних доказів підробки:
+                        Навіть найсучасніші нейромережі (Midjourney, DALL-E) залишають «цифрові відбитки». Часто перше враження "щось тут не так" є найвірнішим.
+                        Ось детальна інструкція, куди дивитися.
                     </p>
+                    <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '1.5rem', borderRadius: '12px', borderLeft: '4px solid var(--color-secondary)', fontStyle: 'italic' }}>
+                        "Діпфейк – це не магія, це математика. І вона часто помиляється в деталях."
+                    </div>
                 </section>
 
                 <section className="info-section">
-                    <h2>1. Руки та Обличчя — Ахіллесова п'ята ШІ</h2>
+                    <h2>1. Анатомія та "Глічі"</h2>
                     <ul className="info-list">
-                        <li><strong>Руки:</strong> Порахуйте пальці. ШІ часто малює 6 пальців, або неприродно вигнуті суглоби.</li>
-                        <li><strong>Очі:</strong> Подивіться на відблиски в зіницях. У реальної людини вони однакові. У ШІ — часто різні.</li>
-                        <li><strong>Вуха та зуби:</strong> Вуха можуть бути асиметричними, а зуби — надто ідеальними або "злитими" в один ряд.</li>
+                        <li><strong>Руки та пальці:</strong> Класична проблема ШІ. Шукайте зайві пальці, неприродні вигини, або руки, що "зливаються" з предметами.</li>
+                        <li><strong>Очі:</strong> У реальної людини відблиски в зіницях (від сонця чи лампи) мають бути в одному місці. У ШІ вони часто різні. Також зверніть увагу на колір райдужки.</li>
+                        <li><strong>Вуха та зуби:</strong> Вуха можуть бути різної форми або розміру. Зуби часто виглядають як суцільна біла смуга або їх занадто багато.</li>
+                        <li><strong>Шкіра та волосся:</strong> Шкіра може виглядати "пластиковою", без пор і зморшок. Волосся іноді розмивається на кінчиках або виглядає як намальоване.</li>
                     </ul>
                 </section>
 
                 <section className="info-section">
-                    <h2>2. Гра світла і тіні</h2>
+                    <h2>2. Фізика та Логіка</h2>
                     <p>
-                        ШІ часто плутає фізику. Тіні можуть падати в різні боки, або об'єкт може бути освітлений інакше, ніж фон.
+                        ШІ часто плутає закони фізики. Зверніть увагу на тіні: чи відповідають вони джерелу світла? Чи є віддзеркалення в окулярах?
+                        Також перевіряйте фон: написи можуть бути "інопланетною мовою", а архітектура — викривленою.
                     </p>
                 </section>
 
                 <section className="info-section">
-                    <h2>3. Деталі фону</h2>
+                    <h2>🛠 Інструменти розслідувача</h2>
                     <p>
-                        Придивіться до фону: візерунки на шпалерах, цегла, написи. ШІ часто робить їх розмитими або викривленими (наприклад, "пливучий" текст).
+                        Найпростіший спосіб перевірити фото — це <strong>зворотний пошук зображень</strong>.
                     </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
+                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px' }}>
+                            <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '0.5rem' }}>🔍 Google Images</h3>
+                            <p style={{ fontSize: '0.9rem', margin: 0 }}>Натисніть "Пошук по картинці". Знайдете, де це фото з'явилося вперше.</p>
+                        </div>
+                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px' }}>
+                            <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '0.5rem' }}>🌐 TinEye</h3>
+                            <p style={{ fontSize: '0.9rem', margin: 0 }}>Потужний інструмент для пошуку оригіналів та модифікацій зображення.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="info-section">
+                    <h2>🔗 Корисні лінки</h2>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: '1rem' }}>
+                        <a href="https://images.google.com/" target="_blank" rel="noopener noreferrer" className="source-link">Google Images</a>
+                        <a href="https://tineye.com/" target="_blank" rel="noopener noreferrer" className="source-link">TinEye</a>
+                        <a href="https://fotoforensics.com/" target="_blank" rel="noopener noreferrer" className="source-link">FotoForensics (Pro)</a>
+                    </div>
                 </section>
             </>
         )
@@ -108,36 +133,57 @@ export const pagesContent = {
     family: {
         title: 'Як говорити про фейки з близькими',
         icon: '👨‍👩‍👧‍👦',
+        heroImage: familyHeroImage,
         content: (
             <>
                 <section className="info-section">
-                    <h2>Розмова без конфліктів</h2>
+                    <h2>🕊️ Розмова без конфліктів</h2>
                     <p>
-                        Найважливіше — зберегти довіру. Не звинувачуйте і не висміюйте.
+                        Коли близькі діляться фейками, наша перша реакція — суперечити. Це помилка.
+                        Агресія будує емоційну стіну, за якою вас більше не чують (так званий "ефект зворотного вогню").
                     </p>
+                    <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '1.5rem', borderRadius: '12px', borderLeft: '4px solid var(--color-true)', fontStyle: 'italic' }}>
+                        "Ваша мета — не виграти суперечку, а зберегти стосунки та допомогти рідній людині розібратися."
+                    </div>
                 </section>
 
                 <section className="info-section">
-                    <h2>Метод «Сендвіча істини»</h2>
+                    <h2>🍔 Метод «Сендвіча істини»</h2>
+                    <p>Психологи рекомендують подавати інформацію в такій послідовності, щоб вона запам’яталася:</p>
                     <ol className="info-list" style={{ listStyle: 'decimal', paddingLeft: '1.5rem' }}>
                         <li>
-                            <strong>Факт:</strong> Почніть з незаперечної правди.
+                            <strong>Хліб (Факт):</strong> Почніть з простої, незаперечної правди, з якою ви обоє згодні. Це створює спільну землю.
                         </li>
                         <li>
-                            <strong>Попередження про міф:</strong> Коротко згадайте фейк і поясніть, чому він маніпулятивний (без детального повторення брехні).
+                            <strong>Начинка (Попередження про міф):</strong> Коротко згадайте фейк, але не фокусуйтеся на ньому. Поясніть, ДЕ маніпуляція (наприклад, "це фото 5-річної давнини").
                         </li>
                         <li>
-                            <strong>Факт:</strong> Закінчіть повторенням правди, щоб саме вона запам'яталася.
+                            <strong>Хліб (Факт):</strong> Закінчіть повторенням правди, але вже з аргументами. Останнє речення мозок запам'ятовує найкраще.
                         </li>
                     </ol>
                 </section>
 
                 <section className="info-section">
-                    <h2>Приватність та Емпатія</h2>
-                    <p>
-                        Говоріть приватно, не в спільних чатах. Це допоможе уникнути захисної реакції.
-                        Слухайте активно: зрозумійте, чому людина повірила (страх, турбота).
-                    </p>
+                    <h2>🤫 Приватність та Емпатія</h2>
+                    <ul className="info-list">
+                        <li>
+                            <strong>Говоріть приватно.</strong> Ніколи не виправляйте людину в сімейному чаті чи коментарях. Публічний сором змушує захищатися, а не думати.
+                        </li>
+                        <li>
+                            <strong>Слухайте страх.</strong> За кожним репостом фейку стоїть емоція. Бабуся поширює "ліки від усього" не тому, що дурна, а тому що боїться хвороб і хоче про вас подбати. Подякуйте за турботу, а потім поясніть суть.
+                        </li>
+                        <li>
+                            <strong>Дайте вихід.</strong> Дозвольте людині зберегти обличчя. "Це дуже якісний фейк, я б теж повірив, якби не перевірив джерело".
+                        </li>
+                    </ul>
+                </section>
+
+                <section className="info-section">
+                    <h2>📚 Що почитати разом?</h2>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: '1rem' }}>
+                        <a href="https://filter.mg.gov.ua/publication/" target="_blank" rel="noopener noreferrer" className="source-link">Посібники з медіаграмотності</a>
+                        <a href="https://www.youtube.com/watch?v=HuW3GjY_iQo" target="_blank" rel="noopener noreferrer" className="source-link">Відео пояснення</a>
+                    </div>
                 </section>
             </>
         )
