@@ -125,6 +125,7 @@ function App() {
               title={page?.title}
               content={page?.content}
               imageIcon={page?.icon}
+              heroImage={page?.heroImage}
               onBack={() => setCurrentView('home')}
             />
           );
