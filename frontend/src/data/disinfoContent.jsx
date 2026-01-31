@@ -1,5 +1,6 @@
 import deepfakeHeroImage from '../assets/deepfake_disinfo_hero.png';
 import familyHeroImage from '../assets/family_disinfo_hero.png';
+import textHeroImage from '../assets/text_disinfo_hero.png';
 
 export const pagesContent = {
     text: {
