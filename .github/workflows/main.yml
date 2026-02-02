@@ -50,7 +50,7 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}/backend:sha-${{ github.sha }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-to: type=gha,mode=max
 
       - name: Build and Push Frontend (Candidate)
         # Збірка frontend образу та пуш з тегом sha-<commit_hash>
@@ -60,7 +60,7 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}/frontend:sha-${{ github.sha }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-to: type=gha,mode=max
 
   # ============================================================================
   # 2. TEST CANDIDATE - Запуск тестів на зібраних образах
