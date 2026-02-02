@@ -144,9 +144,10 @@ services:
       restart_policy:
         condition: on-failure
       labels:
+        - "traefik.enable=true"
         - "traefik.http.routers.telegram-bot.rule=Host(`newsfilterai.pp.ua`) && PathPrefix(`/api/telegram/webhook/`)"
         - "traefik.http.routers.telegram-bot.priority=100"
-        - "traefik.http.routers.telegram-bot.entrypoints=web,websecure"
+        - "traefik.http.routers.telegram-bot.entrypoints=web"
         - "traefik.http.services.telegram-bot.loadbalancer.server.port=8001"
         - "traefik.docker.network=dokploy-network"
 
@@ -180,7 +181,7 @@ services:
       replicas: 1
 
 # ==============================================================================
-# NETWORKS & VOLUMES s
+# NETWORKS & VOLUMES
 # ==============================================================================
 networks:
   newsfilter_network:
