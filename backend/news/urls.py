@@ -13,6 +13,7 @@ from .views import (
     DomainListView,
     DebugCheckView,
     ClearCacheView,
+    NewsCheckBulkDeleteView,
 )
 
 app_name = 'news'
@@ -32,6 +33,9 @@ urlpatterns = [
 
     # Історія перевірок
     path('history/', NewsCheckHistoryView.as_view(), name='history'),
+
+    # Масове видалення
+    path('history/delete/', NewsCheckBulkDeleteView.as_view(), name='history-delete'),
 
     # Перевірка репутації домену
     path('domain-check/', DomainCheckView.as_view(), name='domain-check'),

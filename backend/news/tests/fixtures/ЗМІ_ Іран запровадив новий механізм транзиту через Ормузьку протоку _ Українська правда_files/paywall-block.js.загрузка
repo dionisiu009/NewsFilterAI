@@ -1,0 +1,208 @@
+(function () {
+    let isPaywallBlockLoading = false;
+    let isPaywallBlockLoaded = false;
+
+    function initPaywallBlock(container) {
+        const slider = container.querySelector(".subscription_block_slider");
+        const tabs = container.querySelectorAll(".switch_tab");
+        const cards = Array.from(container.querySelectorAll(".subscription_block_item"));
+        const dotsContainer = container.querySelector(".subscription_block_pagination");
+
+        if (!slider) return;
+
+        function getVisibleCards() {
+            return cards.filter(card => card.style.display !== 'none');
+        }
+
+        function scrollToSlide(index) {
+            const visible = getVisibleCards();
+            if (!visible[index]) return;
+            const card = visible[index];
+            const offset = card.offsetLeft - (slider.offsetWidth - card.offsetWidth) / 2;
+            slider.scrollTo({left: offset, behavior: 'smooth'});
+        }
+
+        function updateDots() {
+            if (!dotsContainer) return;
+            const visible = getVisibleCards();
+            if (!visible.length) return;
+
+            const sliderCenter = slider.scrollLeft + slider.offsetWidth / 2;
+            let activeIdx = 0;
+            let minDistance = Infinity;
+
+            visible.forEach((card, idx) => {
+                const distance = Math.abs((card.offsetLeft + card.offsetWidth / 2) - sliderCenter);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    activeIdx = idx;
+                }
+            });
+
+            dotsContainer.querySelectorAll('.pagination_dot').forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === activeIdx);
+            });
+        }
+
+        function renderDots() {
+            if (!dotsContainer) return;
+            dotsContainer.innerHTML = '';
+
+            getVisibleCards().forEach((card, idx) => {
+                const dot = document.createElement('span');
+                dot.className = 'pagination_dot' + (idx === 0 ? ' active' : '');
+                dot.addEventListener('click', () => scrollToSlide(idx));
+                dotsContainer.appendChild(dot);
+            });
+        }
+
+        function showPeriod(period) {
+            cards.forEach(card => {
+                card.style.display = card.dataset.period?.toLowerCase() === period.toLowerCase()
+                    ? 'block'
+                    : 'none';
+            });
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    renderDots();
+                    scrollToSlide(0);
+                    updateDots();
+                });
+            });
+        }
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                showPeriod(tab.dataset.type);
+            });
+        });
+
+        slider.addEventListener('scroll', updateDots);
+
+        const activeTab = container.querySelector('.switch_tab.active');
+        showPeriod(activeTab ? activeTab.dataset.type : 'month');
+
+        if (window.innerWidth <= 820) {
+            setTimeout(() => {
+                scrollToSlide(0);
+                updateDots();
+            }, 400);
+        }
+    }
+
+    function initPaywallHide(container) {
+        const articleText = document.querySelector('.post_news_text, .post_article_text');
+        const footer = document.querySelector('footer');
+
+        if (!articleText) return;
+
+        Array.from(articleText.children).forEach((child, index) => {
+            if (index >= 2) child.remove();
+        });
+
+        let el = articleText.nextElementSibling;
+        while (el) {
+            const next = el.nextElementSibling;
+            el.remove();
+            el = next;
+        }
+
+        el = articleText.parentElement.nextElementSibling;
+        while (el && !el.contains(container) && el !== container) {
+            const next = el.nextElementSibling;
+            el.remove();
+            el = next;
+        }
+
+        el = container.nextElementSibling;
+        while (el && el !== footer) {
+            const next = el.nextElementSibling;
+            el.remove();
+            el = next;
+        }
+    }
+
+    function hideContentImmediately() {
+        const articleText = document.querySelector('.post_news_text, .post_article_text');
+        if (!articleText) return;
+
+        Array.from(articleText.children).forEach((child, index) => {
+            if (index >= 2) child.style.visibility = 'hidden';
+        });
+    }
+
+    function hideAdIfPaywallExists() {
+        const paywall = document.querySelector('.subscription_block');
+        const ad = document.getElementById('notsy-sticky-container_UPR_FLOAT_970');
+        const leftAd = document.querySelector('.section_news_side .unit_side_banner');
+
+        if (paywall) {
+            if (ad) ad.style.display = 'none';
+            if (leftAd) leftAd.style.display = 'none';
+        }
+    }
+
+    function loadPaywallBlock() {
+        if (isPaywallBlockLoading || isPaywallBlockLoaded) return;
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadPaywallBlock, {once: true});
+            return;
+        }
+
+        const placeholder = document.getElementById('paywall-placeholder');
+        if (!placeholder) return;
+
+        hideContentImmediately();
+        isPaywallBlockLoading = true;
+
+        fetch('/paywall/paywall-block.html')
+            .then(r => r.json())
+            .then(data => {
+                placeholder.outerHTML = data.block;
+
+                const container = document.querySelector('.subscription_block');
+                if (!container) return;
+
+                initPaywallHide(container);
+                initPaywallBlock(container);
+
+                hideAdIfPaywallExists();
+
+                if (typeof window.initPlanSelect === 'function') {
+                    window.initPlanSelect(container);
+                }
+                isPaywallBlockLoaded = true;
+            })
+            .finally(() => {
+                isPaywallBlockLoading = false;
+            });
+    }
+
+    window.loadPaywallBlock = loadPaywallBlock;
+
+    function initOnReady() {
+        const container = document.querySelector('.subscription_block');
+        if (container && !document.getElementById('paywall-placeholder')) {
+
+            initPaywallBlock(container);
+
+            if (typeof window.initPlanSelect === 'function') {
+                window.initPlanSelect(container);
+            }
+        }
+
+        if (window.isNeedPaywallLock) {
+            loadPaywallBlock();
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initOnReady);
+    } else {
+        initOnReady();
+    }
+})();

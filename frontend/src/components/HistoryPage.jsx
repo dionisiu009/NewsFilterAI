@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './HistoryPage.css';
 
-const HistoryPage = ({ onBack }) => {
+const HistoryPage = ({ onBack, debugEnabled }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
@@ -10,7 +10,11 @@ const HistoryPage = ({ onBack }) => {
   const [selectedCheckId, setSelectedCheckId] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [details, setDetails] = useState(null);
-  
+
+  // Selection state for deletion
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const LIMIT = 100;
 
   const fetchHistory = async (currentOffset) => {
@@ -18,13 +22,13 @@ const HistoryPage = ({ onBack }) => {
       setLoading(true);
       const response = await axios.get(`/api/history/?limit=${LIMIT}&offset=${currentOffset}`);
       const data = response.data;
-      
+
       if (currentOffset === 0) {
         setHistory(data.results);
       } else {
         setHistory(prev => [...prev, ...data.results]);
       }
-      
+
       setHasMore(data.results.length === LIMIT && (currentOffset + LIMIT) < data.total);
     } catch (error) {
       console.error('Failed to fetch history:', error);
@@ -43,13 +47,18 @@ const HistoryPage = ({ onBack }) => {
     fetchHistory(newOffset);
   };
 
-  const handleRowClick = async (id) => {
+  const handleRowClick = async (id, e) => {
+    // Don't expand row if clicking checkbox
+    if (e.target.type === 'checkbox' || e.target.closest('.checkbox-cell')) {
+      return;
+    }
+
     if (selectedCheckId === id) {
       setSelectedCheckId(null);
       setDetails(null);
       return;
     }
-    
+
     setSelectedCheckId(id);
     setDetailsLoading(true);
     setDetails(null);
@@ -63,6 +72,52 @@ const HistoryPage = ({ onBack }) => {
     }
   };
 
+  // Selection logic
+  const handleSelectOne = (id) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === history.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(history.map(item => item.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    if (!window.confirm(`Ви дійсно хочете видалити ${selectedIds.size} записів?`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await axios.post('/api/history/delete/', { ids: Array.from(selectedIds) });
+
+      // Update local state
+      setHistory(prev => prev.filter(item => !selectedIds.has(item.id)));
+      setSelectedIds(new Set());
+
+      // If we deleted everything that was visible, maybe fetch more or show empty
+      if (history.length <= selectedIds.size && hasMore) {
+        fetchHistory(0);
+      }
+    } catch (error) {
+      console.error('Failed to delete entries:', error);
+      alert('Помилка при видаленні записів');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const getVerdictIcon = (verdict) => {
     switch (verdict) {
       case 'fact':
@@ -72,22 +127,52 @@ const HistoryPage = ({ onBack }) => {
       case 'false':
         return '🔴';
       case 'partial':
-      case 'clickbait':
         return '🟡';
+      case 'clickbait':
+        return '🟠';
+      case 'unverifiable':
+        return '⚪';
+      case 'error':
+        return '⚫';
+      case 'opinion':
+        return '🗣️';
+      case 'satire':
+        return '🎭';
       default:
         return '❓';
     }
   };
 
+  const showDeleteUI = debugEnabled;
+
   return (
     <div className="history-page">
-      <button className="back-btn" onClick={onBack}>← На головну</button>
-      <h2 className="history-title">Історія перевірок</h2>
-      
+      <div className="history-header">
+        <h2 className="history-title">Історія перевірок</h2>
+        {showDeleteUI && selectedIds.size > 0 && (
+          <button
+            className="bulk-delete-btn"
+            onClick={handleBulkDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Видалення...' : `Видалити виділені (${selectedIds.size})`}
+          </button>
+        )}
+      </div>
+
       <div className="history-table-container">
         <table className="history-table">
           <thead>
             <tr>
+              {showDeleteUI && (
+                <th className="checkbox-cell">
+                  <input
+                    type="checkbox"
+                    checked={history.length > 0 && selectedIds.size === history.length}
+                    onChange={handleSelectAll}
+                  />
+                </th>
+              )}
               <th>Статус</th>
               <th>Заголовок / URL</th>
               <th>Домен</th>
@@ -97,10 +182,19 @@ const HistoryPage = ({ onBack }) => {
           <tbody>
             {history.map((item) => (
               <React.Fragment key={item.id}>
-                <tr 
-                  className={`history-row ${selectedCheckId === item.id ? 'active' : ''}`}
-                  onClick={() => handleRowClick(item.id)}
+                <tr
+                  className={`history-row ${selectedCheckId === item.id ? 'active' : ''} ${selectedIds.has(item.id) ? 'selected' : ''}`}
+                  onClick={(e) => handleRowClick(item.id, e)}
                 >
+                  {showDeleteUI && (
+                    <td className="checkbox-cell">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(item.id)}
+                        onChange={() => handleSelectOne(item.id)}
+                      />
+                    </td>
+                  )}
                   <td className="status-cell">
                     <span className="verdict-icon">{getVerdictIcon(item.verdict)}</span>
                     <span className="verdict-text">{item.verdict_display}</span>
@@ -119,7 +213,7 @@ const HistoryPage = ({ onBack }) => {
                 </tr>
                 {selectedCheckId === item.id && (
                   <tr className="details-row">
-                    <td colSpan="4">
+                    <td colSpan={showDeleteUI ? 5 : 4}>
                       {detailsLoading ? (
                         <div className="details-loading">Завантаження деталей...</div>
                       ) : details ? (
@@ -134,15 +228,15 @@ const HistoryPage = ({ onBack }) => {
             ))}
           </tbody>
         </table>
-        
+
         {loading && <div className="loading-indicator">Завантаження...</div>}
-        
-        {!loading && hasMore && (
+
+        {!loading && hasMore && history.length >= 10 && (
           <button className="load-more-btn" onClick={handleLoadMore}>
             Завантажити ще
           </button>
         )}
-        
+
         {!loading && history.length === 0 && (
           <div className="empty-state">Історія перевірок порожня</div>
         )}
@@ -167,8 +261,8 @@ const ArtifactsViewer = ({ artifacts }) => {
         <h4 className="sidebar-title">📁 Pipeline Artifacts</h4>
         <ul className="file-list">
           {files.map(file => (
-            <li 
-              key={file} 
+            <li
+              key={file}
               className={`file-item ${selectedFile === file ? 'selected' : ''}`}
               onClick={() => setSelectedFile(file)}
             >
@@ -196,11 +290,11 @@ const ArtifactsViewer = ({ artifacts }) => {
 // Extremely simple JSON syntax highlighter
 const SyntaxHighlight = ({ content }) => {
   if (!content) return null;
-  
+
   // Basic heuristic: if it looks like JSON markdown block, we color it
   if (content.includes('```json')) {
     const parts = content.split(/(```json\n[\s\S]*?\n```)/);
-    
+
     return (
       <>
         {parts.map((part, i) => {
@@ -217,7 +311,7 @@ const SyntaxHighlight = ({ content }) => {
       </>
     );
   }
-  
+
   return content;
 };
 
@@ -226,7 +320,7 @@ const highlightJson = (jsonStr) => {
     // try formatting it first if it's not well-formatted
     const obj = JSON.parse(jsonStr);
     const formatted = JSON.stringify(obj, null, 2);
-    
+
     // regex for basic json syntax highlighting
     const html = formatted.replace(
       /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
@@ -246,7 +340,7 @@ const highlightJson = (jsonStr) => {
         return `<span class="${cls}">${match}</span>`;
       }
     );
-    
+
     return <code dangerouslySetInnerHTML={{ __html: html }} />;
   } catch (e) {
     return <code>{jsonStr}</code>;

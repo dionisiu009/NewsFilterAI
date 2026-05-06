@@ -7,20 +7,20 @@ import './ResultCard.css';
 import { DisinfoCards } from "./DisinfoCards";
 
 const verdictConfig = {
-    true: { emoji: "🟢", label: "Достовірно" },
-    partial: { emoji: "🟡", label: "Частково достовірно" },
-    false: { emoji: "🔴", label: "Фейк" },
-    fact: { emoji: "🟢", label: "Факт" },
-    "false-fake": { emoji: "🔴", label: "Фейк" },
-    clickbait: { emoji: "🟠", label: "Клікбейт" },
-    opinion: { emoji: "🗣️", label: "Думка" },
-    satire: { emoji: "🎭", label: "Сатира" },
-    unverifiable: { emoji: "⚪", label: "Неможливо перевірити" },
-    error: { emoji: "⚫", label: "Помилка" },
-    pending: { emoji: "⏳", label: "В обробці" },
+  true: { emoji: "🟢", label: "Достовірно" },
+  partial: { emoji: "🟡", label: "Частково достовірно" },
+  false: { emoji: "🔴", label: "Фейк" },
+  fact: { emoji: "🟢", label: "Факт" },
+  "false-fake": { emoji: "🔴", label: "Фейк" },
+  clickbait: { emoji: "🟠", label: "Клікбейт" },
+  opinion: { emoji: "🗣️", label: "Думка" },
+  satire: { emoji: "🎭", label: "Сатира" },
+  unverifiable: { emoji: "⚪", label: "Неможливо перевірити" },
+  error: { emoji: "⚫", label: "Помилка" },
+  pending: { emoji: "⏳", label: "В обробці" },
 };
 
-function ResultCard({ result, onReset }) {
+function ResultCard({ result, onReset, debugEnabled }) {
   let verdictClass = 'unknown';
 
   if (result.verdict === 'true' || result.verdict === 'fact') verdictClass = 'true';
@@ -46,22 +46,22 @@ function ResultCard({ result, onReset }) {
     if (!references || Object.keys(references).length === 0) return text;
     const parts = text.split(/(\[\d+\])/g);
     return parts.map((part, idx) => {
-        const match = part.match(/\[(\d+)\]/);
-        if (match && references[match[1]]) {
-            return (
-                <a
-                    key={idx}
-                    href={references[match[1]]}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: '#646cff', textDecoration: 'underline' }}
-                    title={references[match[1]]}
-                >
-                    {part}
-                </a>
-            );
-        }
-        return part;
+      const match = part.match(/\[(\d+)\]/);
+      if (match && references[match[1]]) {
+        return (
+          <a
+            key={idx}
+            href={references[match[1]]}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#646cff', textDecoration: 'underline' }}
+            title={references[match[1]]}
+          >
+            {part}
+          </a>
+        );
+      }
+      return part;
     });
   };
 
@@ -118,8 +118,8 @@ function ResultCard({ result, onReset }) {
         </div>
       )}
 
-      {/* Рекомендація */}
-      {displayRecommendation && (
+      {/* Рекомендація (показуємо лише для проблемних випадків) */}
+      {displayRecommendation && (result.verdict === 'error' || result.verdict === 'unverifiable' || result.verdict === 'partial' || result.verdict === 'false' || result.verdict === 'false-fake' || result.verdict === 'clickbait') && (
         <div className="result-section result-section--highlight">
           <h3 className="section-title">
             <span>💡</span> Рекомендація
@@ -152,7 +152,7 @@ function ResultCard({ result, onReset }) {
                         <ul style={{ margin: 0, paddingLeft: '20px' }}>
                           {Object.entries(intent.references).map(([id, url]) => {
                             let domain = url;
-                            try { domain = new URL(url).hostname; } catch (e) {}
+                            try { domain = new URL(url).hostname; } catch (e) { }
                             return (
                               <li key={id}>
                                 <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
@@ -168,65 +168,65 @@ function ResultCard({ result, onReset }) {
                 ))}
               </div>
             ) : (
-             <>
-            {/* Точність фактів */}
-            {(result.analysis.analysis?.factual_accuracy || result.analysis.factual_accuracy) && (
-              <div className="detail-item">
-                <strong>Точність фактів:</strong>
-                <p>{result.analysis.analysis?.factual_accuracy || result.analysis.factual_accuracy}</p>
-              </div>
-            )}
+              <>
+                {/* Точність фактів */}
+                {(result.analysis.analysis?.factual_accuracy || result.analysis.factual_accuracy) && (
+                  <div className="detail-item">
+                    <strong>Точність фактів:</strong>
+                    <p>{result.analysis.analysis?.factual_accuracy || result.analysis.factual_accuracy}</p>
+                  </div>
+                )}
 
-            {/* Достовірність джерела */}
-            {(result.analysis.analysis?.source_credibility || result.analysis.source_credibility) && (
-              <div className="detail-item">
-                <strong>Достовірність джерела:</strong>
-                <p>{result.analysis.analysis?.source_credibility || result.analysis.source_credibility}</p>
-              </div>
-            )}
+                {/* Достовірність джерела */}
+                {(result.analysis.analysis?.source_credibility || result.analysis.source_credibility) && (
+                  <div className="detail-item">
+                    <strong>Достовірність джерела:</strong>
+                    <p>{result.analysis.analysis?.source_credibility || result.analysis.source_credibility}</p>
+                  </div>
+                )}
 
-            {/* Ознаки маніпуляції */}
-            {((result.analysis.analysis?.manipulation_signs?.length > 0) || (result.analysis.manipulation_signs?.length > 0)) && (
-              <div className="detail-item">
-                <strong>Ознаки маніпуляції:</strong>
-                <ul>
-                  {(result.analysis.analysis?.manipulation_signs || result.analysis.manipulation_signs).map((sign, i) => (
-                    <li key={i}>{sign}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+                {/* Ознаки маніпуляції */}
+                {((result.analysis.analysis?.manipulation_signs?.length > 0) || (result.analysis.manipulation_signs?.length > 0)) && (
+                  <div className="detail-item">
+                    <strong>Ознаки маніпуляції:</strong>
+                    <ul>
+                      {(result.analysis.analysis?.manipulation_signs || result.analysis.manipulation_signs).map((sign, i) => (
+                        <li key={i}>{sign}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-            {/* Динамічне відображення будь-яких інших полів аналізу */}
-            {result.analysis.analysis && Object.entries(result.analysis.analysis).map(([key, value]) => {
-              if (['factual_accuracy', 'source_credibility', 'manipulation_signs', 'verified_facts', 'note'].includes(key)) return null;
-              if (!value || (typeof value === 'string' && value.length < 5)) return null;
+                {/* Динамічне відображення будь-яких інших полів аналізу */}
+                {result.analysis.analysis && Object.entries(result.analysis.analysis).map(([key, value]) => {
+                  if (['factual_accuracy', 'source_credibility', 'manipulation_signs', 'verified_facts', 'note'].includes(key)) return null;
+                  if (!value || (typeof value === 'string' && value.length < 5)) return null;
 
-              const labels = {
-                'detailed_analysis': 'Детальний аналіз',
-                'evidence': 'Докази',
-                'context': 'Контекст'
-              };
+                  const labels = {
+                    'detailed_analysis': 'Детальний аналіз',
+                    'evidence': 'Докази',
+                    'context': 'Контекст'
+                  };
 
-              return (
-                <div className="detail-item" key={key}>
-                  <strong>{labels[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:</strong>
-                  {Array.isArray(value) ? (
-                    <ul>{value.map((v, i) => <li key={i}>{v}</li>)}</ul>
-                  ) : (
-                    <p>{value}</p>
-                  )}
-                </div>
-              );
-            })}
-             </>
+                  return (
+                    <div className="detail-item" key={key}>
+                      <strong>{labels[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:</strong>
+                      {Array.isArray(value) ? (
+                        <ul>{value.map((v, i) => <li key={i}>{v}</li>)}</ul>
+                      ) : (
+                        <p>{value}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
             )}
           </div>
         </details>
       )}
 
       {/* Debug інформація про парсинг */}
-      {result.debugEnabled && (
+      {debugEnabled && (
         <DebugInfo debugInfo={result.debug_info} />
       )}
 

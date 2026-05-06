@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from celery import shared_task
 
-from .models import NewsCheck
+from .models import NewsCheck, ParserDebugInfo
 from .services import domain_list_service, news_cache_service
 from .parser_service import article_parser
 from .ai_service import get_gemini_service
@@ -99,8 +99,22 @@ def check_news_task(self, url: str, news_check_id: int) -> Dict[str, Any]:
         if domain_info['in_whitelist']:
             extra_context = f"\n\n[ПРИМІТКА: Джерело {domain} знаходиться у білому списку достовірних ЗМІ]"
 
+        def on_pipeline_progress(current_artifacts):
+            """Зберігаємо проміжні результати в БД"""
+            try:
+                # Використовуємо .update() для уникнення проблем з конкурентністю та гонкою станів
+                # Хоча Celery task виконується послідовно в одному воркері
+                NewsCheck.objects.filter(id=news_check_id).update(
+                    pipeline_artifacts=current_artifacts,
+                    updated_at=datetime.now()
+                )
+                logger.info(f"Проміжні результати збережені ({len(current_artifacts)} файлів)")
+            except Exception as e:
+                logger.warning(f"Помилка збереження проміжних результатів: {e}")
+
         import asyncio
         from .council_pipeline import execute_pipeline
+        from datetime import datetime
         
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -109,9 +123,10 @@ def check_news_task(self, url: str, news_check_id: int) -> Dict[str, Any]:
             pipeline_task = execute_pipeline(
                 news_title=parsed['title'],
                 news_content=parsed['text'],
+                on_progress=on_pipeline_progress
             )
             raw_judge_verdict = loop.run_until_complete(
-                asyncio.wait_for(pipeline_task, timeout=180.0)
+                asyncio.wait_for(pipeline_task, timeout=240.0)
             )
             
             if raw_judge_verdict and not raw_judge_verdict.get("error"):
@@ -121,7 +136,7 @@ def check_news_task(self, url: str, news_check_id: int) -> Dict[str, Any]:
                     'is_fake': raw_judge_verdict.get('final_verdict') in ['false-fake', 'false'],
                     'summary': raw_judge_verdict.get('overall_summary', ''),
                     'analysis': raw_judge_verdict.get('intents_analysis', []),
-                    'recommendation': 'Детальний аналіз від AI Council',
+                    'recommendation': raw_judge_verdict.get('recommendation', ''),
                     'artifacts': raw_judge_verdict.get('artifacts', {})
                 }
             else:
@@ -270,9 +285,14 @@ def _save_result(
     """
     # Мапимо verdict з AI на Django choices
     verdict_map = {
+        'fact': NewsCheck.VerdictChoices.FACT,
         'true': NewsCheck.VerdictChoices.TRUE,
+        'false-fake': NewsCheck.VerdictChoices.FALSE_FAKE,
         'false': NewsCheck.VerdictChoices.FALSE,
         'partial': NewsCheck.VerdictChoices.PARTIALLY_TRUE,
+        'clickbait': NewsCheck.VerdictChoices.CLICKBAIT,
+        'opinion': NewsCheck.VerdictChoices.OPINION,
+        'satire': NewsCheck.VerdictChoices.SATIRE,
         'unverifiable': NewsCheck.VerdictChoices.UNVERIFIABLE,
         'error': NewsCheck.VerdictChoices.ERROR,
     }
@@ -282,7 +302,7 @@ def _save_result(
 
     # Оновлюємо NewsCheck
     news_check.verdict = verdict_map.get(ai_verdict, NewsCheck.VerdictChoices.UNVERIFIABLE)
-    news_check.is_fake = ai_result.get('is_fake', False)
+    news_check.is_fake = ai_result.get('is_fake', False) or ai_verdict in ['false', 'false-fake']
     news_check.ai_response = ai_result.get('summary', '')
 
     # Додаємо інформацію про домен до JSON
@@ -297,7 +317,41 @@ def _save_result(
         'ai_response', 'ai_verdict_json', 'pipeline_artifacts', 'updated_at'
     ])
 
+    # Очищуємо кеш історії
+    try:
+        from django.core.cache import cache
+        from django_redis import get_redis_connection
+        
+        # Видаляємо всі ключі історії
+        redis_conn = get_redis_connection("default")
+        history_keys = redis_conn.keys("*news_history_*")
+        if history_keys:
+            redis_conn.delete(*history_keys)
+            logger.info(f"Кеш історії очищено ({len(history_keys)} ключів)")
+    except Exception as e:
+        logger.warning(f"Помилка очищення кешу історії: {e}")
+
     logger.info(f"Результат збережено: NewsCheck id={news_check.id}, verdict={ai_verdict}")
+
+    # Збережемо parser debug info в окрему записі БД
+    if parsed_info:
+        try:
+            ParserDebugInfo.objects.update_or_create(
+                news_check=news_check,
+                defaults={
+                    'parsed_title': (parsed_info.get('title') or '')[:500],
+                    'parsed_text': parsed_info.get('text', ''),
+                    'parsed_authors': parsed_info.get('authors', []),
+                    'parsed_publish_date': str(parsed_info.get('publish_date', '')) or None,
+                    'parsed_domain': parsed_info.get('domain', ''),
+                    'parsed_meta_description': parsed_info.get('meta_description', ''),
+                    'parsed_word_count': parsed_info.get('word_count', 0),
+                    'parsers_debug': parsed_info.get('parsers_debug', []),
+                }
+            )
+            logger.info(f"ParserDebugInfo збережено для NewsCheck id={news_check.id}")
+        except Exception as e:
+            logger.warning(f"Помилка збереження ParserDebugInfo: {e}")
 
     result = _format_result(news_check, parsed_info)
     result['_is_error'] = is_error
@@ -307,10 +361,11 @@ def _save_result(
 def _format_result(news_check: NewsCheck, parsed_info: Dict[str, Any] = None) -> Dict[str, Any]:
     """
     Форматує результат для відповіді API та кешування.
+    debug_info завжди підтягується з БД (ParserDebugInfo), якщо доступна.
 
     Args:
         news_check: Об'єкт NewsCheck з БД
-        parsed_info: Інформація про парсинг (для debug режиму)
+        parsed_info: Інформація про парсинг (для свіжої перевірки)
 
     Returns:
         Словник з результатом перевірки
@@ -334,18 +389,23 @@ def _format_result(news_check: NewsCheck, parsed_info: Dict[str, Any] = None) ->
         'cached': False
     }
 
-    # Додаємо debug інформацію якщо є
-    if parsed_info:
-        result['debug_info'] = {
-            'parsed_title': parsed_info.get('title', '')[:100],
-            'parsed_text': parsed_info.get('text', ''),
-            'parsed_authors': parsed_info.get('authors', []),
-            'parsed_publish_date': parsed_info.get('publish_date'),
-            'parsed_domain': parsed_info.get('domain', ''),
-            'parsed_meta_description': parsed_info.get('meta_description', ''),
-            'parsed_word_count': parsed_info.get('word_count', 0),
-            'parsers_debug': parsed_info.get('parsers_debug', [])
-        }
+    # 1. Намагаємось завантажити debug_info з БД (ParserDebugInfo) — працює і для кешу
+    try:
+        parser_debug = ParserDebugInfo.objects.get(news_check=news_check)
+        result['debug_info'] = parser_debug.to_dict()
+    except ParserDebugInfo.DoesNotExist:
+        # 2. Якщо в БД нема запису — намагаємось використати parsed_info (для свіжої перевірки)
+        if parsed_info:
+            result['debug_info'] = {
+                'parsed_title': parsed_info.get('title', '')[:100],
+                'parsed_text': parsed_info.get('text', ''),
+                'parsed_authors': parsed_info.get('authors', []),
+                'parsed_publish_date': parsed_info.get('publish_date'),
+                'parsed_domain': parsed_info.get('domain', ''),
+                'parsed_meta_description': parsed_info.get('meta_description', ''),
+                'parsed_word_count': parsed_info.get('word_count', 0),
+                'parsers_debug': parsed_info.get('parsers_debug', [])
+            }
 
     return result
 

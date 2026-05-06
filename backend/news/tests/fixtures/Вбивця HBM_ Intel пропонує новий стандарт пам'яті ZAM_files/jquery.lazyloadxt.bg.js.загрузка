@@ -1,0 +1,8 @@
+/*! Lazy Load XT v1.1.0 2016-01-12
+ * http://ressio.github.io/lazy-load-xt
+ * (C) 2016 RESS.io
+ * Licensed under MIT */
+(function($){var options=$.lazyLoadXT,bgAttr=options.bgAttr||'data-bg';options.selector+=',['+bgAttr+']';$(document).on('lazyshow',function(e){var $this=$(e.target),url=$this.attr(bgAttr);if(!!url){if($this.hasClass('thumb-dark'))
+$this.css('background',"linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.8) 100%),url('"+url+"')").removeAttr(bgAttr).triggerHandler('load');else if($this.hasClass('thumb-dark-6'))
+$this.css('background',"linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.6) 100%),url('"+url+"')").removeAttr(bgAttr).triggerHandler('load');else if($this.hasClass('thumb-dark-gradient'))
+$this.css('background',"linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, #000000 100%),url('"+url+"')").removeAttr(bgAttr).triggerHandler('load');else $this.css('background-image',"url('"+url+"')").removeAttr(bgAttr).triggerHandler('load')}})})(window.jQuery||window.Zepto||window.$)

@@ -17,8 +17,13 @@ class NewsCheck(models.Model):
     class VerdictChoices(models.TextChoices):
         PENDING = 'pending', 'В обробці'
         TRUE = 'true', 'Достовірна'
+        FACT = 'fact', 'Факт'
         FALSE = 'false', 'Фейк'
+        FALSE_FAKE = 'false-fake', 'Фейк'
         PARTIALLY_TRUE = 'partial', 'Частково правда'
+        CLICKBAIT = 'clickbait', 'Клікбейт'
+        OPINION = 'opinion', 'Думка'
+        SATIRE = 'satire', 'Сатира'
         UNVERIFIABLE = 'unverifiable', 'Неможливо перевірити'
         ERROR = 'error', 'Помилка обробки'
 
@@ -132,6 +137,88 @@ class NewsCheck(models.Model):
     def generate_url_hash(url: str) -> str:
         """Генерує SHA-256 hash для URL (wrapper для сумісності)"""
         return generate_url_hash(url)
+
+
+class ParserDebugInfo(models.Model):
+    """
+    Зберігає детальну інформацію про парсинг статті.
+    Пов'язана з NewsCheck через FK.
+    Доступна як для свіжих, так і для кешованих результатів.
+    """
+
+    news_check = models.OneToOneField(
+        NewsCheck,
+        on_delete=models.CASCADE,
+        related_name='parser_debug',
+        verbose_name='Перевірка новини'
+    )
+
+    # Основні поля парсингу
+    parsed_title = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name='Заголовок (parsed)'
+    )
+    parsed_text = models.TextField(
+        blank=True,
+        verbose_name='Повний текст статті'
+    )
+    parsed_authors = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='Автори'
+    )
+    parsed_publish_date = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='Дата публікації (raw)'
+    )
+    parsed_domain = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='Домен'
+    )
+    parsed_meta_description = models.TextField(
+        blank=True,
+        verbose_name='Meta Description'
+    )
+    parsed_word_count = models.IntegerField(
+        default=0,
+        verbose_name='Кількість слів'
+    )
+
+    # Дані порівняння всіх парсерів (Bs4, Readability, Trafilatura, Newspaper3k, Goose3)
+    parsers_debug = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='Порівняння результатів парсерів'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Збережено'
+    )
+
+    class Meta:
+        verbose_name = 'Parser Debug Info'
+        verbose_name_plural = 'Parser Debug Info'
+
+    def __str__(self):
+        return f'ParseDebug → NewsCheck #{self.news_check_id}'
+
+    def to_dict(self) -> dict:
+        """Повертає дані у форматі, очікуваному фронтендом"""
+        return {
+            'parsed_title': self.parsed_title,
+            'parsed_text': self.parsed_text,
+            'parsed_authors': self.parsed_authors or [],
+            'parsed_publish_date': self.parsed_publish_date,
+            'parsed_domain': self.parsed_domain,
+            'parsed_meta_description': self.parsed_meta_description,
+            'parsed_word_count': self.parsed_word_count,
+            'parsers_debug': self.parsers_debug or [],
+        }
 
 
 class DomainReputation(models.Model):

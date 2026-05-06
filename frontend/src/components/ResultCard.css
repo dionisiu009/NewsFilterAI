@@ -4,33 +4,59 @@
   background: rgba(255, 255, 255, 0.05);
   border-radius: 16px;
   padding: 2rem;
-  border-left: 4px solid #888;
+  border-left: 6px solid #888;
 }
 
-/* Verdict Colors */
-.verdict--true {
+/* Verdict Colors — matched to class names applied in ResultCard.jsx */
+
+/* ✅ Факт / Достовірно — зелений */
+.result-card.true,
+.result-card.fact {
   border-left-color: #10b981;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
 }
 
-.verdict--false {
+/* 🔴 Фейк — червоний */
+.result-card.false,
+.result-card.false-fake {
   border-left-color: #ef4444;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
 }
 
-.verdict--partial {
+/* 🟡 Частково — жовтий */
+.result-card.partial {
   border-left-color: #f59e0b;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
 }
 
-.verdict--unverifiable {
-  border-left-color: #6b7280;
-  background: linear-gradient(135deg, rgba(107, 114, 128, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-}
-
-.verdict--error {
+/* 🟠 Клікбейт — помаранчевий */
+.result-card.clickbait {
   border-left-color: #f97316;
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+}
+
+/* 🗣️ Думка — фіолетовий */
+.result-card.opinion {
+  border-left-color: #a78bfa;
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+}
+
+/* 🎭 Сатира — синій */
+.result-card.satire {
+  border-left-color: #38bdf8;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+}
+
+/* ⚪ Неможливо перевірити — сірий */
+.result-card.unverifiable {
+  border-left-color: #9ca3af;
+  background: linear-gradient(135deg, rgba(156, 163, 175, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+}
+
+/* ⚫ Помилка — темно-червоний */
+.result-card.error {
+  border-left-color: #dc2626;
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
 }
 
 /* Header */

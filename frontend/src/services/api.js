@@ -9,8 +9,8 @@ import axios from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Таймаути
-const REQUEST_TIMEOUT = 30000; // 30 секунд
-const POLLING_TIMEOUT = 60000; // 60 секунд
+const REQUEST_TIMEOUT = 60000; // 60 секунд
+const POLLING_TIMEOUT = 300000; // 300 секунд (5 хвилин)
 const POLLING_INTERVAL = 2000; // 2 секунди
 
 // Створюємо axios instance

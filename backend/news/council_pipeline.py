@@ -791,7 +791,12 @@ _WORKER_SYSTEM_PROMPT = (
     "Be rigorous, critical and logical — do not use external knowledge. "
     "At the end of your analysis you MUST issue a single verdict for the entire "
     "news article chosen strictly from this list: "
-    "fact, false-fake, clickbait, opinion, satire, unverifiable. "
+    "fact, partial, false-fake, clickbait, opinion, satire, unverifiable. "
+    "Use 'fact' when all or nearly all key claims are confirmed as true. "
+    "Use 'partial' when there is a mix: some claims are confirmed TRUE, while others are explicitly proven FALSE or MISLEADING. "
+    "Do NOT use 'partial' if a claim is simply missing evidence (use 'unverifiable' or 'fact' instead). "
+    "Use 'false-fake' when the majority of key claims are disproven. "
+    "Use 'unverifiable' when most claims lack enough evidence to be confirmed or denied. "
     "Format the verdict on its own line as: VERDICT: <verdict>"
 )
 
@@ -1147,17 +1152,22 @@ def _build_judge_user_prompt(
         f"{worker_section}\n"
         "Based on all the information above, provide a final JSON response.\n\n"
         "**CRITICAL INSTRUCTIONS FOR JSON FORMAT:**\n"
-        "1. `final_verdict` must be EXACTLY one of: fact, false-fake, clickbait, opinion, satire, unverifiable.\n"
-        "2. For each intent in `intents_analysis`, `intent_verdict` must also be one of those six values.\n"
+        "1. `final_verdict` must be EXACTLY one of: fact, partial, false-fake, clickbait, opinion, satire, unverifiable.\n"
+        "2. For each intent in `intents_analysis`, `intent_verdict` must also be one of those seven values.\n"
         "3. **LANGUAGE REQUIREMENT:** Write `overall_summary` and every `explanation` field "
         "in UKRAINIAN (українська мова). All other fields (verdict values, URLs, citation markers) remain as specified.\n"
         "4. For each intent, provide an `explanation` (1-2 paragraphs) citing evidence.\n"
         "5. **CITATIONS ARE MANDATORY:** In your `explanation` text, cite sources as [1], [2], etc., "
         "matching the Source numbers listed above for each claim.\n"
         "6. `references` object: map citation numbers to their exact URLs.\n"
-        "7. **UNVERIFIABLE CLAUSE:** If you return 'unverifiable' as the final_verdict, you MUST detail in 'overall_summary' "
+        "7. **VERDICT SELECTION LOGIC:**\n"
+        "   - Use 'fact' when ALL key claims are confirmed by sources. If most claims are true and only a minor one is unverifiable, 'fact' is still acceptable.\n"
+        "   - Use 'partial' ONLY when the article contains a mix of confirmed TRUTH and confirmed LIES/MISINFORMATION. At least one claim must be true and at least one must be proven false/fake.\n"
+        "   - Use 'false-fake' when the MAJORITY of key claims or the central thesis is disproven.\n"
+        "   - Use 'unverifiable' when sources are insufficient to confirm OR deny the claims for the majority of the article.\n"
+        "8. **UNVERIFIABLE CLAUSE:** If you return 'unverifiable' as the final_verdict, you MUST detail in 'overall_summary' "
         "exactly WHY the news cannot be verified (e.g., lack of reliable sources, contradicting data, or off-topic search results).\n"
-        "8. Output ONLY valid JSON. No markdown, no code blocks.\n\n"
+        "9. Output ONLY valid JSON. No markdown, no code blocks.\n\n"
         f"**JSON SCHEMA:**\n{_JUDGE_JSON_SCHEMA}"
     )
 
@@ -1178,7 +1188,7 @@ async def stage_5_judge_synthesis(
     RETRY_SLEEP = 15
 
     # Валідні вердикти для перевірки
-    VALID_VERDICTS = {"fact", "false-fake", "clickbait", "opinion", "satire", "unverifiable"}
+    VALID_VERDICTS = {"fact", "partial", "false-fake", "clickbait", "opinion", "satire", "unverifiable"}
 
     client = genai.Client(api_key=judge_api_key)
     base_user_prompt = _build_judge_user_prompt(
@@ -1214,7 +1224,7 @@ async def stage_5_judge_synthesis(
                 else:
                     logger.warning("[Stage 5] Invalid final_verdict '%s'. Retrying...", fv)
                     # Додаємо повідомлення про помилку у промпт для наступної спроби
-                    current_prompt = base_user_prompt + f"\n\nВАЖЛИВО: У твоїй попередній відповіді поле 'final_verdict' мало значення '{fv}'. Це НЕПРАВИЛЬНО. Значення 'final_verdict' має бути ТІЛЬКИ одним з наступних: 'fact', 'false-fake', 'clickbait', 'opinion', 'satire', 'unverifiable'."
+                    current_prompt = base_user_prompt + f"\n\nВАЖЛИВО: У твоїй попередній відповіді поле 'final_verdict' мало значення '{fv}'. Це НЕПРАВИЛЬНО. Значення 'final_verdict' має бути ТІЛЬКИ одним з наступних: 'fact', 'partial', 'false-fake', 'clickbait', 'opinion', 'satire', 'unverifiable'."
                     continue
 
             # Model returned something non-JSON or missing key
@@ -1276,13 +1286,22 @@ def _save_stage_5_verdict(
 # MAIN — entry point
 # ═════════════════════════════════════════════════════════════════════════════
 
-async def execute_pipeline(news_title: str, news_content: str, news_date: str = None) -> dict[str, Any]:
+async def execute_pipeline(news_title: str, news_content: str, news_date: str = None, on_progress=None) -> dict[str, Any]:
     """
     Головний інтерфейс (асинхронний) для запуску всього процесу перевірки.
     Повертає фінальний вердикт як словник.
     """
     if not news_date:
         news_date = datetime.now().strftime("%Y-%m-%d")
+
+    artifacts = {}
+
+    def _trigger_progress():
+        if on_progress:
+            try:
+                on_progress(artifacts)
+            except Exception as e:
+                logger.warning(f"Error in progress callback: {e}")
 
     # ── Stage 1: Extract intents ─────────────────────────────────────────
     logger.info("Stage 1 — Extracting intents from the news article...")
@@ -1319,6 +1338,35 @@ async def execute_pipeline(news_title: str, news_content: str, news_date: str = 
     )
     top_articles = _filter_top_articles(scored_results, threshold=0.5, max_per_intent=3)
 
+    # Populate artifacts for Stages 1-3
+    for item in scored_results:
+        intent_id = item["intent_id"]
+        intent_text = item["intent"]
+        guidance = item["search_guidance"]
+        articles = item.get("articles", [])
+        safe_intent = _sanitize_filename(intent_text)
+        
+        # Stage 1-2
+        filename_12 = f"STAGE_01-02_[{intent_id}]_-_{safe_intent}.md"
+        header_12 = f"# [{intent_id}]\n**Intent:** {intent_text}\n**Guide:** {guidance}\n\n---\n## Tavily Search Results ({len(articles)} articles)\n\n"
+        rows_12 = []
+        for art in articles:
+            cohere_score = art.get("cohere_score")
+            score_line = f"- **Cohere score:** {cohere_score:.4f}\n" if cohere_score is not None else ""
+            rows_12.append(f"### {art.get('title', '(no title)')}\n- **URL:** {art.get('url', '')}\n- **Relevance score:** {art.get('score')}\n{score_line}- **Published:** {art.get('published_date', '')}\n\n{art.get('content', '')}\n\n")
+        artifacts[filename_12] = header_12 + "\n".join(rows_12)
+
+        # Stage 3
+        top5 = sorted(articles, key=lambda a: a.get("cohere_score", 0.0), reverse=True)[:5]
+        filename_3 = f"STAGE_03_[{intent_id}]_-_{safe_intent}.md"
+        header_3 = f"# [{intent_id}] Cohere Rerank — Top-5\n**Intent:** {intent_text}\n**Search guidance:** {guidance}\n\n---\n\n"
+        rows_3 = []
+        for rank, art in enumerate(top5, start=1):
+            rows_3.append(f"## #{rank} — {art.get('title', '(no title)')}\n- **URL:** {art.get('url', '')}\n- **Cohere score:** {art.get('cohere_score', 0.0):.4f}\n- **Tavily score:** {art.get('score')}\n- **Published:** {art.get('published_date', '')}\n\n{art.get('content', '')}\n\n")
+        artifacts[filename_3] = header_3 + "\n".join(rows_3)
+    
+    _trigger_progress()
+
     logger.info("Stage 3 complete. Top articles ready for Stage 4: %d intent(s).", len(top_articles))
 
     # ── Stage 4: Workers analysis ────────────────────────────────────────
@@ -1334,6 +1382,12 @@ async def execute_pipeline(news_title: str, news_content: str, news_date: str = 
         api_keys=worker_api_keys,
     )
 
+    # Populate artifacts for Stage 4
+    for name, report in workers_data.items():
+        filename = f"STAGE_04_WORKER_{name.upper()}.md"
+        artifacts[filename] = f"# Stage 4 — Worker Report: {name.upper()}\n*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n---\n\n{report}\n"
+    
+    _trigger_progress()
     logger.info("Stage 4 complete.")
 
     # ── Stage 5: Judge synthesis ─────────────────────────────────────────
@@ -1347,89 +1401,13 @@ async def execute_pipeline(news_title: str, news_content: str, news_date: str = 
         judge_api_key=os.getenv("COUNCIL_SUMMARY_GEMINI_API_KEY", ""),
     )
 
-    artifacts = {}
-
-    # Stage 1-2
-    for item in scored_results:
-        intent_id = item["intent_id"]
-        intent_text = item["intent"]
-        guidance = item["search_guidance"]
-        articles = item.get("articles", [])
-        safe_intent = _sanitize_filename(intent_text)
-        filename = f"STAGE_01-02_[{intent_id}]_-_{safe_intent}.md"
-        
-        header = (
-            f"# [{intent_id}]\n"
-            f"**Intent:** {intent_text}\n"
-            f"**Guide:** {guidance}\n"
-            f"\n---\n"
-            f"## Tavily Search Results ({len(articles)} articles)\n\n"
-        )
-        rows = []
-        for art in articles:
-            cohere_score = art.get("cohere_score")
-            score_line = f"- **Cohere score:** {cohere_score:.4f}\n" if cohere_score is not None else ""
-            rows.append(
-                f"### {art.get('title', '(no title)')}\n"
-                f"- **URL:** {art.get('url', '')}\n"
-                f"- **Relevance score:** {art.get('score')}\n"
-                f"{score_line}"
-                f"- **Published:** {art.get('published_date', '')}\n\n"
-                f"{art.get('content', '')}\n\n"
-            )
-        artifacts[filename] = header + "\n".join(rows)
-
-    # Stage 3
-    for item in scored_results:
-        intent_id = item["intent_id"]
-        intent_text = item["intent"]
-        guidance = item["search_guidance"]
-        articles = item.get("articles", [])
-        top5 = sorted(articles, key=lambda a: a.get("cohere_score", 0.0), reverse=True)[:5]
-        safe_intent = _sanitize_filename(intent_text)
-        filename = f"STAGE_03_[{intent_id}]_-_{safe_intent}.md"
-        header = (
-            f"# [{intent_id}] Cohere Rerank — Top-5\n"
-            f"**Intent:** {intent_text}\n"
-            f"**Search guidance:** {guidance}\n"
-            f"\n---\n\n"
-        )
-        rows = []
-        for rank, art in enumerate(top5, start=1):
-            rows.append(
-                f"## #{rank} — {art.get('title', '(no title)')}\n"
-                f"- **URL:** {art.get('url', '')}\n"
-                f"- **Cohere score:** {art.get('cohere_score', 0.0):.4f}\n"
-                f"- **Tavily score:** {art.get('score')}\n"
-                f"- **Published:** {art.get('published_date', '')}\n\n"
-                f"{art.get('content', '')}\n\n"
-            )
-        artifacts[filename] = header + "\n".join(rows)
-
-    # Stage 4
-    for name, report in workers_data.items():
-        filename = f"STAGE_04_WORKER_{name.upper()}.md"
-        content = (
-            f"# Stage 4 — Worker Report: {name.upper()}\n"
-            f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n"
-            "\n---\n\n"
-            f"{report}\n"
-        )
-        artifacts[filename] = content
-
-    # Stage 5
-    filename = "STAGE_05_JUDGE_VERDICT.md"
-    header = (
-        f"# Stage 5 — Supreme Judge Verdict\n"
-        f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n"
-        f"*Final Verdict: **{judge_verdict.get('final_verdict', 'N/A')}***\n"
-        "\n---\n"
-        "```json\n"
-    )
-    footer = "\n```\n"
-    artifacts[filename] = header + json.dumps(judge_verdict, ensure_ascii=False, indent=2) + footer
-
+    # Populate artifact for Stage 5
+    filename_5 = "STAGE_05_JUDGE_VERDICT.md"
+    header_5 = f"# Stage 5 — Supreme Judge Verdict\n*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n*Final Verdict: **{judge_verdict.get('final_verdict', 'N/A')}***\n\n---\n```json\n"
+    artifacts[filename_5] = header_5 + json.dumps(judge_verdict, ensure_ascii=False, indent=2) + "\n```\n"
+    
     judge_verdict["artifacts"] = artifacts
+    _trigger_progress()
 
     return judge_verdict
 

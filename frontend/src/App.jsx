@@ -131,15 +131,31 @@ function App() {
                   <div className="verdict-examples">
                     <div className="verdict-example verdict-example--true">
                       <span>✅</span> Достовірна
+                      <span className="verdict-tooltip">Всі ключові твердження підтверджені надійними джерелами</span>
                     </div>
                     <div className="verdict-example verdict-example--false">
                       <span>🔴</span> Фейк
+                      <span className="verdict-tooltip">Більшість ключових тверджень або основна суть новини є неправдивими</span>
                     </div>
                     <div className="verdict-example verdict-example--partial">
                       <span>🟡</span> Частково правда
+                      <span className="verdict-tooltip">Мікс фактів: частина правдива, але є і явна брехня чи маніпуляції</span>
+                    </div>
+                    <div className="verdict-example verdict-example--clickbait">
+                      <span>🟠</span> Клікбейт
+                      <span className="verdict-tooltip">Заголовок перебільшений або вводить в оману для кліків</span>
+                    </div>
+                    <div className="verdict-example verdict-example--opinion">
+                      <span>🗣️</span> Думка
+                      <span className="verdict-tooltip">Суб'єктивна точка зору автора, а не об'єктивна новина</span>
+                    </div>
+                    <div className="verdict-example verdict-example--satire">
+                      <span>🎭</span> Сатира
+                      <span className="verdict-tooltip">Гумористичний контент, який не претендує на достовірність</span>
                     </div>
                     <div className="verdict-example verdict-example--unknown">
                       <span>❓</span> Неможливо перевірити
+                      <span className="verdict-tooltip">Недостатньо інформації в мережі для підтвердження або спростування</span>
                     </div>
                   </div>
                 </div>
@@ -151,6 +167,7 @@ function App() {
         } else if (currentView === 'history') {
           return (
             <HistoryPage
+              debugEnabled={debugEnabled}
               onBack={() => {
                 setCurrentView('home');
                 window.history.pushState({ view: 'home' }, '', "/");
@@ -176,7 +193,7 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <div className={`app ${currentView === 'history' ? 'app--full-width' : ''}`}>
       <Header onLogoClick={handleLogoClick} />
 
       <main className="app-main">
@@ -202,7 +219,7 @@ function App() {
           Відповіді сгенеровані AI та можуть бути хибними.
         </p>
         <p className="footer-note">
-          Powered by Google Gemini AI
+          Powered by Google, Groq, Cohere, Tavily
         </p>
         <DebugToggle
           enabled={debugEnabled}

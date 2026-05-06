@@ -1,0 +1,285 @@
+function initializeHeader() {
+    var header = document.querySelector(".header");
+    var screenWidthBelow640 = window.matchMedia("(max-width: 640px)");
+
+    function fixHeader() {
+        var scrollY = window.scrollY || window.pageYOffset;
+        var threshold = 0;
+
+        if (scrollY > threshold) {
+            header.classList.add("header_fixed");
+        } else {
+            header.classList.remove("header_fixed");
+        }
+    }
+
+    function checkScreenWidth(screenWidthBelow640) {
+        if (screenWidthBelow640.matches) {
+            window.addEventListener("scroll", fixHeader);
+            fixHeader();
+        } else {
+            window.removeEventListener("scroll", fixHeader);
+            header.classList.remove("header_fixed");
+        }
+    }
+
+    screenWidthBelow640.addListener(checkScreenWidth);
+    checkScreenWidth(screenWidthBelow640);
+}
+
+document.addEventListener("DOMContentLoaded", initializeHeader);
+
+
+
+/* menu */
+
+document.addEventListener('DOMContentLoaded', function() {
+	
+var menuLinks = document.querySelectorAll('.top_menu_link');
+  menuLinks.forEach(function(menuLink) {
+    menuLink.addEventListener('click', function (event) {
+      event.stopPropagation();
+      toggleMenu();
+    });
+  });
+
+  document.addEventListener('click', function (event) {
+    if (event.target.closest('.top_menu_link')) {
+      event.stopPropagation();
+      toggleMenu();
+    }
+  });
+	
+	
+  var searchLinks = document.querySelectorAll('.top_search_link');
+  searchLinks.forEach(function(searchLink) {
+    searchLink.addEventListener('click', function (event) {
+      event.stopPropagation();
+      toggleSearch();
+    });
+  });
+
+  document.addEventListener('click', function (event) {
+    if (event.target.closest('.top_search_link')) {
+      event.stopPropagation();
+      toggleSearch();
+    }
+  });
+	
+/*  document.querySelector('.close_menu').addEventListener('click', closeMenu);
+  document.querySelector('.close_search').addEventListener('click', closeSearch);*/
+
+
+  document.addEventListener('click', function(event) {
+    var menuPopup = document.querySelector('.menu_popup');
+    var searchPopup = document.querySelector('.search_popup');
+    var menuButton = document.querySelector('.top_menu_link');
+    var searchButton = document.querySelector('.top_search_link');
+	var menuHeader = document.querySelector('.header_main');
+
+
+    if (event.target !== menuButton && !menuPopup.contains(event.target)) {
+      menuPopup.style.display = 'none';
+      menuButton.classList.remove('active');
+	  menuHeader.classList.remove('active_m');
+    }
+
+    if (event.target !== searchButton && !searchPopup.contains(event.target)) {
+      searchPopup.style.display = 'none';
+      searchButton.classList.remove('active');
+      menuHeader.classList.remove('active_s')
+    }
+  });
+
+ function toggleMenu() {
+  var menuPopup = document.querySelector('.menu_popup');
+  var searchPopup = document.querySelector('.search_popup');
+  var menuButton = document.querySelector('.top_menu_link');
+  var searchButton = document.querySelector('.top_search_link');
+  var menuHeader = document.querySelector('.header_main');
+
+  searchPopup.style.display = 'none';
+  searchButton.classList.remove('active');
+  menuHeader.classList.remove('active_s');
+
+  if (menuPopup.style.display === 'block') {
+    menuPopup.style.display = 'none';
+    menuButton.classList.remove('active');
+    menuHeader.classList.remove('active_m');
+  } else {
+    menuPopup.style.display = 'block';
+    menuButton.classList.add('active');
+    menuHeader.classList.add('active_m');
+  }
+}
+
+function toggleSearch() {
+  var menuPopup = document.querySelector('.menu_popup');
+  var searchPopup = document.querySelector('.search_popup');
+  var menuButton = document.querySelector('.top_menu_link');
+  var searchButton = document.querySelector('.top_search_link');
+  var menuHeader = document.querySelector('.header_main');
+
+  menuPopup.style.display = 'none';
+  menuButton.classList.remove('active');
+  menuHeader.classList.remove('active_m');
+
+  if (searchPopup.style.display === 'block') {
+    searchPopup.style.display = 'none';
+    searchButton.classList.remove('active');
+    menuHeader.classList.remove('active_s');
+  } else {
+    searchPopup.style.display = 'block';
+    searchButton.classList.add('active');
+    menuHeader.classList.add('active_s');
+  }
+}
+
+/* function closeMenu() {
+    var menuPopup = document.querySelector('.menu_popup');
+    var menuButton = document.querySelector('.top_menu_link');
+	var menuHeader = document.querySelector('.header_main');
+
+    menuPopup.style.display = 'none';
+    menuButton.classList.remove('active');
+	menuHeader.classList.remove('active_m')
+  }
+
+  function closeSearch() {
+    var searchPopup = document.querySelector('.search_popup');
+    var searchButton = document.querySelector('.top_search_link');
+	var menuHeader = document.querySelector('.header_main');
+
+    searchPopup.style.display = 'none';
+    searchButton.classList.remove('active');
+	menuHeader.classList.remove('active_s')
+  }*/
+	
+	});
+
+/* url copy */
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    if(document.querySelector('.copy_button')){
+        document.querySelector('.copy_button').addEventListener('click', function() {
+            var urlToCopy = window.location.href;
+            navigator.clipboard.writeText(urlToCopy);
+
+            var tooltip = document.querySelector('.tooltip');
+            //tooltip.innerText = 'Ссылка скопирована';
+            tooltip.style.display = 'block';
+
+            setTimeout(function() {
+                tooltip.style.display = 'none';
+            }, 1800);
+        });
+    }
+
+});
+
+function toggleDropdownMenu(event, toggleElement) {
+    event.preventDefault();
+    var parentLi = toggleElement.parentNode;
+    var menu = parentLi.querySelector('.dropdown_menu');
+    var icon = toggleElement.querySelector('.icon_arr_b');
+
+    if (menu.classList.contains('show-menu')) {
+        menu.classList.remove('show-menu');
+        icon.classList.remove('active');
+    } else {
+        hideAllDropdownMenus();
+        menu.classList.add('show-menu');
+        icon.classList.add('active');
+    }
+}
+
+function hideAllDropdownMenus() {
+    var dropdownMenus = document.querySelectorAll('.dropdown_menu');
+    var icons = document.querySelectorAll('.icon_arr_b');
+
+    dropdownMenus.forEach(function(menu) {
+        menu.classList.remove('show-menu');
+    });
+
+    icons.forEach(function(icon) {
+        icon.classList.remove('active');
+    });
+}
+
+document.addEventListener('click', function(event) {
+    var dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+    var isInsideDropdown = false;
+    dropdownToggles.forEach(function(toggle) {
+        if (toggle.contains(event.target)) {
+            isInsideDropdown = true;
+        }
+    });
+    if (!isInsideDropdown) {
+        hideAllDropdownMenus();
+    }
+});
+
+const fromHTML = (html, trim = true) => {
+    html = trim ? html.trim() : html;
+    if (!html) return null;
+
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    return template.content.children;
+}
+
+function setCookie(name, value, days) {
+    const d = new Date();
+    d.setTime(d.getTime() + (days*24*60*60*1000));
+    document.cookie = `${name}=${value};expires=${d.toUTCString()};path=/`;
+}
+
+function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? match[2] : null;
+}
+
+function loadAds() {
+    const scripts = [
+        "https://securepubads.g.doubleclick.net/tag/js/gpt.js",
+        "https://cdn.membrana.media/cmp/ym.js"
+    ];
+
+    scripts.forEach(src => {
+        const s = document.createElement("script");
+        s.src = src;
+        s.async = true;
+        document.head.appendChild(s);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const modalOverlay = document.getElementById("modal21Overlay");
+    const btn = document.getElementById("closeModal21Btn");
+
+    const confirmed = getCookie("age_confirmed");
+
+    if (!modalOverlay || confirmed) {
+        loadAds();
+        return;
+    }
+
+    modalOverlay.classList.add("active");
+
+    document.body.classList.add("modal21_open");
+    document.body.style.pointerEvents = "none";
+    modalOverlay.style.pointerEvents = "auto";
+
+    btn.addEventListener("click", function () {
+
+        setCookie("age_confirmed", "1", 30);
+
+        modalOverlay.classList.remove("active");
+        document.body.classList.remove("modal21_open");
+        document.body.style.pointerEvents = "auto";
+
+        loadAds();
+    });
+
+});

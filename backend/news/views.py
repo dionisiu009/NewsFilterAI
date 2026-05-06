@@ -300,7 +300,8 @@ class NewsCheckHistoryView(APIView):
         cache_key = None
         if offset == 0 and not domain and not verdict:
             cache_key = f"news_history_l{limit}"
-            cached_data = news_cache_service.cache.get(cache_key)
+            from django.core.cache import cache
+            cached_data = cache.get(cache_key)
             if cached_data:
                 return Response(cached_data, status=status.HTTP_200_OK)
 
@@ -330,7 +331,8 @@ class NewsCheckHistoryView(APIView):
 
         # Save to cache for 1 minute if no filters and offset=0
         if cache_key:
-            news_cache_service.cache.set(cache_key, response_data, 60)
+            from django.core.cache import cache
+            cache.set(cache_key, response_data, 60)
 
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -602,3 +604,47 @@ class ClearCacheView(APIView):
             'message': 'Весь кеш очищено'
         }, status=status.HTTP_200_OK)
 
+
+class NewsCheckBulkDeleteView(APIView):
+    """
+    Endpoint для масового видалення перевірок.
+    POST /api/history/delete/ {"ids": [1, 2, 3]}
+    """
+
+    def post(self, request):
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({
+                'success': False,
+                'error': 'Не вказано ID для видалення'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Отримуємо об'єкти для видалення (щоб знати їх URL для очищення кешу)
+        news_checks = NewsCheck.objects.filter(id__in=ids)
+        
+        count = 0
+        urls_to_clear = []
+        for check in news_checks:
+            urls_to_clear.append(check.url)
+            check.delete()
+            count += 1
+            
+        # Очищаємо кеш Redis для кожного URL
+        for url in urls_to_clear:
+            news_cache_service.delete(url)
+            
+        # Очищаємо кеш історії
+        from django.core.cache import cache
+        # Спробуємо видалити відомі ключі пагінації
+        cache.delete("news_history_l20")
+        cache.delete("news_history_l100")
+        # Якщо використовується django-redis, можна спробувати видалити за шаблоном
+        try:
+            cache.delete_pattern("news_history_*")
+        except AttributeError:
+            pass
+        
+        return Response({
+            'success': True,
+            'deleted_count': count
+        }, status=status.HTTP_200_OK)

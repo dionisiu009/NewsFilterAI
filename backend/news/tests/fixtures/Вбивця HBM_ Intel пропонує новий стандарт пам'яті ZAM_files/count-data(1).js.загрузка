@@ -1,0 +1,5 @@
+var DISQUSWIDGETS;
+
+if (typeof DISQUSWIDGETS != 'undefined') {
+    DISQUSWIDGETS.displayCount({"text":{"and":"\u0442\u0430","comments":{"zero":"0","multiple":"{num}","one":"1"}},"counts":[{"id":"4564983 https:\/\/itc.ua\/?p=4564983","comments":2},{"id":"4565032 https:\/\/itc.ua\/?p=4565032","comments":7},{"id":"4565109 https:\/\/itc.ua\/?p=4565109","comments":0},{"id":"https:\/\/itc.ua\/ua\/articles\/oglyad-samsung-galaxy-a37-pragmatychnyj-smartfon-na-kozhen-den\/","comments":82},{"id":"https:\/\/itc.ua\/ua\/novini\/mobilizatsiya-po-novomu-vidstrochka-za-groshi\/","comments":38},{"id":"https:\/\/itc.ua\/ua\/novini\/iranski-hakery-poklaly-ubuntu-najpopulyarnishyj-linux-dystrybutyv-dosi-ne-vidnovyvsya-povnistyu\/","comments":61},{"id":"https:\/\/itc.ua\/ua\/novini\/vsogo-3-nalashtuvannya-brauzera-yak-shovatysya-vid-shpyguvannya-provajdera-bez-vpn\/","comments":31},{"id":"https:\/\/itc.ua\/ua\/novini\/nardep-zagovoryv-pro-podatok-na-elektromobili\/","comments":123}]});
+}
