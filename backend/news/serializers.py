@@ -52,9 +52,9 @@ class NewsCheckSerializer(serializers.ModelSerializer):
             'verdict',
             'verdict_display',
             'is_fake',
-            'confidence_score',
             'ai_verdict_json',
             'ai_response',
+            'pipeline_artifacts',
             'task_id',
             'created_at',
             'updated_at',
@@ -64,9 +64,9 @@ class NewsCheckSerializer(serializers.ModelSerializer):
             'url_hash',
             'verdict',
             'is_fake',
-            'confidence_score',
             'ai_verdict_json',
             'ai_response',
+            'pipeline_artifacts',
             'task_id',
             'created_at',
             'updated_at',
@@ -93,7 +93,6 @@ class NewsCheckShortSerializer(serializers.ModelSerializer):
             'verdict',
             'verdict_display',
             'is_fake',
-            'confidence_score',
             'created_at',
         ]
 
@@ -123,7 +122,6 @@ class CacheResultSerializer(serializers.Serializer):
     verdict = serializers.CharField()
     verdict_display = serializers.CharField()
     is_fake = serializers.BooleanField()
-    confidence_score = serializers.FloatField()
     ai_verdict_json = serializers.JSONField()
     checked_at = serializers.DateTimeField()
 

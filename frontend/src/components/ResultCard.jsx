@@ -4,70 +4,78 @@
 
 import DebugInfo from './DebugInfo';
 import './ResultCard.css';
+import { DisinfoCards } from "./DisinfoCards";
 
-/**
- * Конфігурація вердиктів
- */
 const verdictConfig = {
-  true: {
-    emoji: '✅',
-    text: 'ДОСТОВІРНА',
-    className: 'verdict--true',
-    description: 'Інформація підтверджена',
-  },
-  false: {
-    emoji: '🔴',
-    text: 'ФЕЙК',
-    className: 'verdict--false',
-    description: 'Виявлено недостовірну інформацію',
-  },
-  partial: {
-    emoji: '🟡',
-    text: 'ЧАСТКОВО ПРАВДА',
-    className: 'verdict--partial',
-    description: 'Містить як правдиву, так і сумнівну інформацію',
-  },
-  unverifiable: {
-    emoji: '❓',
-    text: 'НЕМОЖЛИВО ПЕРЕВІРИТИ',
-    className: 'verdict--unverifiable',
-    description: 'Недостатньо даних для висновку',
-  },
-  error: {
-    emoji: '⚠️',
-    text: 'ПОМИЛКА',
-    className: 'verdict--error',
-    description: 'Виникла помилка при перевірці',
-  },
+    true: { emoji: "🟢", label: "Достовірно" },
+    partial: { emoji: "🟡", label: "Частково достовірно" },
+    false: { emoji: "🔴", label: "Фейк" },
+    fact: { emoji: "🟢", label: "Факт" },
+    "false-fake": { emoji: "🔴", label: "Фейк" },
+    clickbait: { emoji: "🟠", label: "Клікбейт" },
+    opinion: { emoji: "🗣️", label: "Думка" },
+    satire: { emoji: "🎭", label: "Сатира" },
+    unverifiable: { emoji: "⚪", label: "Неможливо перевірити" },
+    error: { emoji: "⚫", label: "Помилка" },
+    pending: { emoji: "⏳", label: "В обробці" },
 };
 
-/**
- * Компонент картки результату
- */
-const ResultCard = ({ result, onReset, debugEnabled = false }) => {
-  const {
-    verdict = 'unverifiable',
-    confidence_score: confidence = 0,
-    title = 'Без заголовку',
-    source_domain: domain = 'Невідомо',
-    summary = '',
-    recommendation = '',
-    ai_verdict_json: analysis = {},
-    cached = false,
-    debug_info: debugInfo = null,
-  } = result;
+function ResultCard({ result, onReset }) {
+  let verdictClass = 'unknown';
 
-  const config = verdictConfig[verdict] || verdictConfig.unverifiable;
+  if (result.verdict === 'true' || result.verdict === 'fact') verdictClass = 'true';
+  else if (result.verdict === 'partial') verdictClass = 'partial';
+  else if (result.verdict === 'false' || result.verdict === 'false-fake') verdictClass = 'false';
+  else if (result.verdict === 'clickbait') verdictClass = 'clickbait';
+  else if (result.verdict === 'opinion') verdictClass = 'opinion';
+  else if (result.verdict === 'satire') verdictClass = 'satire';
+  else if (result.verdict === 'unverifiable') verdictClass = 'unverifiable';
+  else if (result.verdict === 'error') verdictClass = 'error';
+
+  const hasDetailedAnalysis = Array.isArray(result.analysis) ? result.analysis.length > 0 : (result.analysis && (result.analysis.analysis || result.analysis.factual_accuracy || result.analysis.summary));
+
+  const isUnverifiable = result.verdict === 'unverifiable';
+  const isError = result.verdict === 'error';
+
+  const displayRecommendation = isUnverifiable
+    ? "⚠️ Штучному інтелекту не вдалося знайти достатньо надійних джерел для перевірки цієї новини. Рекомендуємо:\n1. Перевірити наявність цієї інформації у відомих світових чи національних ЗМІ.\n2. Звернути увагу на першоджерело (чи є воно офіційним та надійним).\n3. Пошукати ключові слова з новини в Google самостійно."
+    : result.recommendation;
+
+  const renderExplanationWithLinks = (text, references) => {
+    if (!text) return null;
+    if (!references || Object.keys(references).length === 0) return text;
+    const parts = text.split(/(\[\d+\])/g);
+    return parts.map((part, idx) => {
+        const match = part.match(/\[(\d+)\]/);
+        if (match && references[match[1]]) {
+            return (
+                <a
+                    key={idx}
+                    href={references[match[1]]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#646cff', textDecoration: 'underline' }}
+                    title={references[match[1]]}
+                >
+                    {part}
+                </a>
+            );
+        }
+        return part;
+    });
+  };
 
   return (
-    <div className={`result-card ${config.className}`}>
+    <div className={`result-card ${verdictClass}`}>
       {/* Заголовок з вердиктом */}
       <div className="result-header">
         <div className="verdict-badge">
-          <span className="verdict-emoji">{config.emoji}</span>
-          <span className="verdict-text">{config.text}</span>
+          <span className="verdict-emoji">{verdictConfig[result.verdict]?.emoji}</span>
+          <span className="verdict-text">
+            {isError && result.summary ? result.summary : verdictConfig[result.verdict]?.label}
+          </span>
         </div>
-        {cached && (
+        {result.cached && (
           <span className="cache-badge" title="Результат з кешу">
             📦 Кеш
           </span>
@@ -75,91 +83,114 @@ const ResultCard = ({ result, onReset, debugEnabled = false }) => {
       </div>
 
       {/* Опис вердикту */}
-      <p className="verdict-description">{config.description}</p>
+      <p className="verdict-description">{verdictConfig[result.verdict]?.description}</p>
 
       {/* Інформація про новину */}
-      <div className="result-info">
-        <div className="info-item">
-          <span className="info-icon">📰</span>
-          <div className="info-content">
-            <span className="info-label">Заголовок</span>
-            <span className="info-value">{title}</span>
-          </div>
-        </div>
-
-        <div className="info-item">
-          <span className="info-icon">🌐</span>
-          <div className="info-content">
-            <span className="info-label">Джерело</span>
-            <span className="info-value">{domain}</span>
-          </div>
-        </div>
-
-        <div className="info-item">
-          <span className="info-icon">📊</span>
-          <div className="info-content">
-            <span className="info-label">Впевненість AI</span>
-            <div className="confidence-bar-wrapper">
-              <div
-                className="confidence-bar"
-                style={{ width: `${Math.min(confidence, 100)}%` }}
-              />
-              <span className="confidence-value">{confidence.toFixed(0)}%</span>
+      {!isError && (
+        <div className="result-info">
+          <div className="info-item">
+            <span className="info-icon">📰</span>
+            <div className="info-content">
+              <span className="info-label">Заголовок</span>
+              <span className="info-value">{result.title}</span>
             </div>
           </div>
+
+          <div className="info-item">
+            <span className="info-icon">🌐</span>
+            <div className="info-content">
+              <span className="info-label">Джерело</span>
+              <span className="info-value">{result.source_domain}</span>
+            </div>
+          </div>
+
+
         </div>
-      </div>
+      )}
 
       {/* Аналіз */}
-      {summary && (
+      {result.summary && !isError && (
         <div className="result-section">
           <h3 className="section-title">
             <span>📝</span> Аналіз
           </h3>
-          <p className="section-content">{summary}</p>
+          <p className="section-content" style={{ whiteSpace: 'pre-wrap' }}>{result.summary}</p>
         </div>
       )}
 
       {/* Рекомендація */}
-      {recommendation && (
+      {displayRecommendation && (
         <div className="result-section result-section--highlight">
           <h3 className="section-title">
             <span>💡</span> Рекомендація
           </h3>
-          <p className="section-content">{recommendation}</p>
+          <p className="section-content" style={{ whiteSpace: 'pre-wrap' }}>{displayRecommendation}</p>
         </div>
       )}
 
       {/* Детальний аналіз AI */}
-      {analysis && (analysis.analysis || analysis.factual_accuracy || analysis.summary) && (
+      {hasDetailedAnalysis && (
         <details className="ai-analysis-accordion">
           <summary>
             🔬 Детальний аналіз AI
           </summary>
 
           <div className="details-content">
+            {Array.isArray(result.analysis) ? (
+              <div className="intents-analysis" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                {result.analysis.map((intent, idx) => (
+                  <div key={idx} className="intent-item" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: '12px', borderRadius: '8px' }}>
+                    <div style={{ marginBottom: '8px', fontSize: '1.1em', fontWeight: 'bold' }}>
+                      {verdictConfig[intent.intent_verdict]?.emoji || '❔'} {verdictConfig[intent.intent_verdict]?.label || intent.intent_verdict}
+                    </div>
+                    <p style={{ margin: '0 0 10px 0', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                      {renderExplanationWithLinks(intent.explanation, intent.references)}
+                    </p>
+                    {intent.references && Object.keys(intent.references).length > 0 && (
+                      <div style={{ fontSize: '0.9em', opacity: 0.8 }}>
+                        <strong style={{ display: 'block', marginBottom: '4px' }}>🔗 Джерела:</strong>
+                        <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                          {Object.entries(intent.references).map(([id, url]) => {
+                            let domain = url;
+                            try { domain = new URL(url).hostname; } catch (e) {}
+                            return (
+                              <li key={id}>
+                                <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
+                                  [{id}] {domain}
+                                </a>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+             <>
             {/* Точність фактів */}
-            {(analysis.analysis?.factual_accuracy || analysis.factual_accuracy) && (
+            {(result.analysis.analysis?.factual_accuracy || result.analysis.factual_accuracy) && (
               <div className="detail-item">
                 <strong>Точність фактів:</strong>
-                <p>{analysis.analysis?.factual_accuracy || analysis.factual_accuracy}</p>
+                <p>{result.analysis.analysis?.factual_accuracy || result.analysis.factual_accuracy}</p>
               </div>
             )}
 
             {/* Достовірність джерела */}
-            {(analysis.analysis?.source_credibility || analysis.source_credibility) && (
+            {(result.analysis.analysis?.source_credibility || result.analysis.source_credibility) && (
               <div className="detail-item">
                 <strong>Достовірність джерела:</strong>
-                <p>{analysis.analysis?.source_credibility || analysis.source_credibility}</p>
+                <p>{result.analysis.analysis?.source_credibility || result.analysis.source_credibility}</p>
               </div>
             )}
 
             {/* Ознаки маніпуляції */}
-            {((analysis.analysis?.manipulation_signs?.length > 0) || (analysis.manipulation_signs?.length > 0)) && (
+            {((result.analysis.analysis?.manipulation_signs?.length > 0) || (result.analysis.manipulation_signs?.length > 0)) && (
               <div className="detail-item">
                 <strong>Ознаки маніпуляції:</strong>
                 <ul>
-                  {(analysis.analysis?.manipulation_signs || analysis.manipulation_signs).map((sign, i) => (
+                  {(result.analysis.analysis?.manipulation_signs || result.analysis.manipulation_signs).map((sign, i) => (
                     <li key={i}>{sign}</li>
                   ))}
                 </ul>
@@ -167,7 +198,7 @@ const ResultCard = ({ result, onReset, debugEnabled = false }) => {
             )}
 
             {/* Динамічне відображення будь-яких інших полів аналізу */}
-            {analysis.analysis && Object.entries(analysis.analysis).map(([key, value]) => {
+            {result.analysis.analysis && Object.entries(result.analysis.analysis).map(([key, value]) => {
               if (['factual_accuracy', 'source_credibility', 'manipulation_signs', 'verified_facts', 'note'].includes(key)) return null;
               if (!value || (typeof value === 'string' && value.length < 5)) return null;
 
@@ -188,13 +219,15 @@ const ResultCard = ({ result, onReset, debugEnabled = false }) => {
                 </div>
               );
             })}
+             </>
+            )}
           </div>
         </details>
       )}
 
       {/* Debug інформація про парсинг */}
-      {debugEnabled && (
-        <DebugInfo debugInfo={debugInfo} />
+      {result.debugEnabled && (
+        <DebugInfo debugInfo={result.debug_info} />
       )}
 
       {/* Кнопка нової перевірки */}

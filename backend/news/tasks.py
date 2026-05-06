@@ -99,12 +99,35 @@ def check_news_task(self, url: str, news_check_id: int) -> Dict[str, Any]:
         if domain_info['in_whitelist']:
             extra_context = f"\n\n[ПРИМІТКА: Джерело {domain} знаходиться у білому списку достовірних ЗМІ]"
 
-        gemini_service = get_gemini_service()
-        ai_result = gemini_service.verify_news(
-            title=parsed['title'],
-            content=parsed['text'] + extra_context,
-            url=url
-        )
+        import asyncio
+        from .council_pipeline import execute_pipeline
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            pipeline_task = execute_pipeline(
+                news_title=parsed['title'],
+                news_content=parsed['text'],
+            )
+            raw_judge_verdict = loop.run_until_complete(
+                asyncio.wait_for(pipeline_task, timeout=180.0)
+            )
+            
+            if raw_judge_verdict and not raw_judge_verdict.get("error"):
+                logger.info("Pipeline успішно завершив роботу. Форматуємо результат...")
+                ai_result = {
+                    'verdict': raw_judge_verdict.get('final_verdict', 'unverifiable'),
+                    'is_fake': raw_judge_verdict.get('final_verdict') in ['false-fake', 'false'],
+                    'summary': raw_judge_verdict.get('overall_summary', ''),
+                    'analysis': raw_judge_verdict.get('intents_analysis', []),
+                    'recommendation': 'Детальний аналіз від AI Council',
+                    'artifacts': raw_judge_verdict.get('artifacts', {})
+                }
+            else:
+                raise Exception("Pipeline повернув пустий або помилковий результат")
+        finally:
+            loop.close()
 
         # =====================================================================
         # КРОК 4: Збереження результату в БД
@@ -117,8 +140,7 @@ def check_news_task(self, url: str, news_check_id: int) -> Dict[str, Any]:
         _cache_result(url, result)
 
         logger.info(
-            f"[Task {task_id}] Завершено: verdict={result['verdict']}, "
-            f"confidence={result['confidence_score']}%"
+            f"[Task {task_id}] Завершено: verdict={result['verdict']}"
         )
 
         return result
@@ -154,7 +176,6 @@ def _save_error_result(news_check_id: int, error: Exception, error_trace: str) -
         news_check.ai_response = f"Помилка обробки: {str(error)}"
         news_check.ai_verdict_json = {
             'verdict': 'error',
-            'confidence_score': 0,
             'is_fake': False,
             'summary': f'Помилка при обробці: {str(error)}',
             'error': True,
@@ -179,11 +200,9 @@ def _handle_blacklisted_domain(
 
     news_check.verdict = NewsCheck.VerdictChoices.FALSE
     news_check.is_fake = True
-    news_check.confidence_score = 90.0
     news_check.source_domain = domain_info['domain']
     news_check.ai_verdict_json = {
         'verdict': 'false',
-        'confidence_score': 90,
         'is_fake': True,
         'summary': f"Джерело {domain_info['domain']} знаходиться у чорному списку сумнівних ресурсів",
         'analysis': {
@@ -218,7 +237,6 @@ def _handle_parsing_error(
     news_check.verdict = NewsCheck.VerdictChoices.ERROR
     news_check.ai_verdict_json = {
         'verdict': 'error',
-        'confidence_score': 0,
         'is_fake': False,
         'summary': f'Не вдалося отримати текст статті: {error_message}',
         'error': True,
@@ -265,16 +283,18 @@ def _save_result(
     # Оновлюємо NewsCheck
     news_check.verdict = verdict_map.get(ai_verdict, NewsCheck.VerdictChoices.UNVERIFIABLE)
     news_check.is_fake = ai_result.get('is_fake', False)
-    news_check.confidence_score = float(ai_result.get('confidence_score', 0))
     news_check.ai_response = ai_result.get('summary', '')
 
     # Додаємо інформацію про домен до JSON
     ai_result['domain_info'] = domain_info
     news_check.ai_verdict_json = ai_result
+    
+    if 'artifacts' in ai_result:
+        news_check.pipeline_artifacts = ai_result.pop('artifacts')
 
     news_check.save(update_fields=[
-        'verdict', 'is_fake', 'confidence_score',
-        'ai_response', 'ai_verdict_json', 'updated_at'
+        'verdict', 'is_fake',
+        'ai_response', 'ai_verdict_json', 'pipeline_artifacts', 'updated_at'
     ])
 
     logger.info(f"Результат збережено: NewsCheck id={news_check.id}, verdict={ai_verdict}")
@@ -306,7 +326,6 @@ def _format_result(news_check: NewsCheck, parsed_info: Dict[str, Any] = None) ->
         'verdict': news_check.verdict,
         'verdict_display': news_check.get_verdict_display(),
         'is_fake': news_check.is_fake,
-        'confidence_score': news_check.confidence_score,
         'ai_verdict_json': ai_json,
         'summary': ai_json.get('summary', news_check.ai_response),
         'recommendation': ai_json.get('recommendation', ''),

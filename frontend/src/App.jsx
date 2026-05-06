@@ -2,7 +2,7 @@
 // NEWSFILTERAI - MAIN APPLICATION COMPONENT
 // ==============================================================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Header,
   UrlInputForm,
@@ -11,7 +11,8 @@ import {
   ErrorMessage,
   DebugToggle,
   InfoPage,
-  DisinfoCards
+  DisinfoCards,
+  HistoryPage
 } from './components';
 import { pagesContent } from './data/disinfoContent';
 import { useNewsCheck, CheckStatus } from './hooks/useNewsCheck';
@@ -19,12 +20,9 @@ import './App.css';
 
 function App() {
   const [debugEnabled, setDebugEnabled] = useState(false);
-  const [currentView, setCurrentView] = useState('home');
-
-  const handleCardClick = (id) => {
-    setCurrentView(id);
-  };
-
+  const [currentView, setCurrentView] = useState(() => {
+    return window.location.pathname === '/history' ? 'history' : 'home';
+  });
 
   const {
     status,
@@ -37,6 +35,38 @@ function App() {
     isLoading,
     isProcessing,
   } = useNewsCheck();
+
+  // --- HISTORY MANAGEMENT ---
+  useEffect(() => {
+    const handlePopState = (event) => {
+      const view = (event.state && event.state.view) || 'home';
+      setCurrentView(view);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    // Initial state setup to handle "Back" to home correctly
+    if (!window.history.state) {
+      window.history.replaceState({ view: 'home' }, '', "");
+    }
+
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+  // --------------------------
+
+  const handleLogoClick = (view = 'home') => {
+    reset();
+    if (currentView !== view) {
+      setCurrentView(view);
+      window.history.pushState({ view }, '', view === 'home' ? '/' : `/${view}`);
+    }
+  };
+
+  const handleCardClick = (id) => {
+    setCurrentView(id);
+    window.history.pushState({ view: id }, '', "");
+  };
+
 
   const handleSubmit = (url) => {
     check(url);
@@ -118,6 +148,15 @@ function App() {
               <DisinfoCards onCardClick={handleCardClick} />
             </>
           );
+        } else if (currentView === 'history') {
+          return (
+            <HistoryPage
+              onBack={() => {
+                setCurrentView('home');
+                window.history.pushState({ view: 'home' }, '', "/");
+              }}
+            />
+          );
         } else {
           const page = pagesContent[currentView];
           return (
@@ -126,7 +165,10 @@ function App() {
               content={page?.content}
               imageIcon={page?.icon}
               heroImage={page?.heroImage}
-              onBack={() => setCurrentView('home')}
+              onBack={() => {
+                setCurrentView('home');
+                window.history.pushState({ view: 'home' }, '', "/");
+              }}
             />
           );
         }
@@ -135,7 +177,7 @@ function App() {
 
   return (
     <div className="app">
-      <Header />
+      <Header onLogoClick={handleLogoClick} />
 
       <main className="app-main">
         {/* Форма завжди видима, крім моменту коли є результат АБО ми на сторінці інфо */}
@@ -165,6 +207,7 @@ function App() {
         <DebugToggle
           enabled={debugEnabled}
           onToggle={setDebugEnabled}
+          onHistoryClick={() => handleLogoClick('history')}
         />
       </footer>
     </div>

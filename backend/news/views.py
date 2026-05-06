@@ -296,6 +296,14 @@ class NewsCheckHistoryView(APIView):
         domain = request.query_params.get('domain')
         verdict = request.query_params.get('verdict')
 
+        # Check cache if no filters and offset=0
+        cache_key = None
+        if offset == 0 and not domain and not verdict:
+            cache_key = f"news_history_l{limit}"
+            cached_data = news_cache_service.cache.get(cache_key)
+            if cached_data:
+                return Response(cached_data, status=status.HTTP_200_OK)
+
         # Базовий queryset
         queryset = NewsCheck.objects.exclude(
             verdict=NewsCheck.VerdictChoices.PENDING
@@ -313,12 +321,18 @@ class NewsCheckHistoryView(APIView):
 
         serializer = NewsCheckShortSerializer(news_checks, many=True)
 
-        return Response({
+        response_data = {
             'total': total,
             'limit': limit,
             'offset': offset,
             'results': serializer.data
-        }, status=status.HTTP_200_OK)
+        }
+
+        # Save to cache for 1 minute if no filters and offset=0
+        if cache_key:
+            news_cache_service.cache.set(cache_key, response_data, 60)
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class DomainCheckView(APIView):

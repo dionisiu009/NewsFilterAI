@@ -59,10 +59,7 @@ class NewsCheck(models.Model):
         verbose_name='Є фейком',
         help_text='True якщо новина визнана фейковою'
     )
-    confidence_score = models.FloatField(
-        default=0.0,
-        verbose_name='Рівень впевненості (0-100%)'
-    )
+
     ai_verdict_json = models.JSONField(
         default=dict,
         blank=True,
@@ -72,6 +69,11 @@ class NewsCheck(models.Model):
     ai_response = models.TextField(
         blank=True,
         verbose_name='Текстова відповідь AI'
+    )
+    pipeline_artifacts = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Проміжні результати пайплайну (Markdown)'
     )
 
     # Celery задача

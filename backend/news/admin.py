@@ -16,7 +16,6 @@ class NewsCheckAdmin(admin.ModelAdmin):
         'source_domain',
         'verdict',
         'is_fake',
-        'confidence_score',
         'created_at'
     )
     list_filter = ('verdict', 'is_fake', 'source_domain', 'created_at')
@@ -34,7 +33,7 @@ class NewsCheckAdmin(admin.ModelAdmin):
             'fields': ('url', 'url_hash', 'title', 'source_domain')
         }),
         ('Результат перевірки', {
-            'fields': ('verdict', 'is_fake', 'confidence_score')
+            'fields': ('verdict', 'is_fake')
         }),
         ('Відповідь AI', {
             'fields': ('ai_verdict_json', 'ai_response'),

@@ -249,14 +249,45 @@
 
 @media (max-width: 768px) {
     .info-hero h1 {
-        font-size: 2rem;
+        font-size: 2.2rem;
+    }
+
+    .info-content {
+        padding: 0 1rem;
     }
 
     .info-section {
         padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-radius: 16px;
+    }
+
+    .info-section p {
+        text-align: justify;
+        hyphens: auto;
+        -webkit-hyphens: auto;
     }
 
     .info-icon-large {
         font-size: 3rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .info-content {
+        padding: 0 0.5rem;
+    }
+
+    .info-section {
+        padding: 1.25rem 1rem;
+        border-radius: 12px;
+    }
+
+    .info-section h2 {
+        font-size: 1.4rem;
+    }
+
+    .info-hero h1 {
+        font-size: 1.8rem;
     }
 }

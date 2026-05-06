@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import './InfoPage.css';
 
@@ -10,12 +9,6 @@ export function InfoPage({ title, content, onBack, imageIcon, heroImage }) {
 
     return (
         <div className="info-page fade-in">
-            <div className="back-button-wrapper">
-                <button onClick={onBack} className="back-button">
-                    ← Назад на головну
-                </button>
-            </div>
-
             <div className="info-hero">
                 <div className="info-icon-large">{imageIcon}</div>
                 <h1>{title}</h1>
@@ -28,12 +21,6 @@ export function InfoPage({ title, content, onBack, imageIcon, heroImage }) {
 
             <div className="info-content">
                 {content}
-            </div>
-
-            <div className="info-footer">
-                <button onClick={onBack} className="primary-button">
-                    Зрозуміло, дякую!
-                </button>
             </div>
         </div>
     );

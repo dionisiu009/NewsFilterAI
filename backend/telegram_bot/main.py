@@ -257,26 +257,50 @@ def extract_url(text: str) -> Optional[str]:
     return None
 
 
+# ==============================================================================
+# Константи для форматування
+# ==============================================================================
+VERDICT_EMOJIS = {
+    'true': '🟢',
+    'partial': '🟡',
+    'false': '🔴',
+    'unverifiable': '⚪',
+    'error': '⚫',
+    'pending': '⏳',
+    # New pipeline verdicts
+    'fact': '🟢',
+    'false-fake': '🔴',
+    'clickbait': '🟠',
+    'opinion': '🗣️',
+    'satire': '🎭'
+}
+
+VERDICT_TEXTS = {
+    'true': 'ДОСТОВІРНО',
+    'partial': 'ЧАСТКОВО ДОСТОВІРНО',
+    'false': 'ФЕЙК',
+    'unverifiable': 'НЕМОЖЛИВО ПЕРЕВІРИТИ',
+    'error': 'ПОМИЛКА ПЕРЕВІРКИ',
+    'pending': 'В ОБРОБЦІ',
+    # New pipeline verdicts
+    'fact': 'ФАКТ',
+    'false-fake': 'ФЕЙК',
+    'clickbait': 'КЛІКБЕЙТ',
+    'opinion': 'ДУМКА',
+    'satire': 'САТИРА'
+}
+
+
 def format_verdict_emoji(verdict: str) -> str:
     """Повертає emoji для вердикту"""
-    emoji_map = {
-        'true': '✅',
-        'false': '🔴',
-        'partial': '🟡',
-        'unverifiable': '❓',
-        'pending': '⏳',
-        'error': '⚠️'
-    }
-    return emoji_map.get(verdict, '❓')
+    return VERDICT_EMOJIS.get(verdict, '❓')
 
 
 def format_result_message(result: Dict[str, Any]) -> str:
     """
     Форматує результат перевірки для Telegram.
-
     Args:
         result: Результат перевірки від API
-
     Returns:
         Відформатоване повідомлення
     """
@@ -292,14 +316,7 @@ def format_result_message(result: Dict[str, Any]) -> str:
     # Визначаємо emoji та текст вердикту
     verdict_emoji = format_verdict_emoji(verdict)
 
-    verdict_text_map = {
-        'true': 'ДОСТОВІРНА',
-        'false': 'ФЕЙК',
-        'partial': 'ЧАСТКОВО ПРАВДА',
-        'unverifiable': 'НЕМОЖЛИВО ПЕРЕВІРИТИ',
-        'error': 'ПОМИЛКА ПЕРЕВІРКИ'
-    }
-    verdict_text = verdict_text_map.get(verdict, 'НЕВІДОМО')
+    verdict_text = VERDICT_TEXTS.get(verdict, 'НЕВІДОМО')
 
     # Формуємо повідомлення
     message_parts = [
