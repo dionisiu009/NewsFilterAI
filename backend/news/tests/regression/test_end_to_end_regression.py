@@ -16,7 +16,7 @@ class TestEndToEndRegression:
         self.check_url = reverse('news:check-news')
         self.history_url = reverse('news:history')
 
-    @patch('news.tasks.execute_pipeline')
+    @patch('news.tasks.execute_pipeline', create=True)
     @patch('news.tasks.article_parser.parse_url')
     @patch('news.tasks.domain_list_service.check_url')
     def test_full_check_flow_regression(self, mock_domain_check, mock_parser, mock_pipeline, settings):
