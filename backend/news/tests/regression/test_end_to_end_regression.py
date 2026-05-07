@@ -24,7 +24,7 @@ class TestEndToEndRegression:
         Verify that a full news check request flows correctly through the system.
         Covers: API Reception -> DB Record Creation -> Celery Task -> Parser -> Pipeline -> Result Saving.
         """
-        # 1. Setup mocks.
+        # 1. Setup mocks
         settings.CELERY_TASK_ALWAYS_EAGER = True
         
         test_url = "https://regression-test.com/article-1"
