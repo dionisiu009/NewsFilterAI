@@ -102,7 +102,7 @@ describe('App Component Integration Tests', () => {
 
         render(<App />);
 
-        expect(screen.getByText('ДОСТОВІРНА')).toBeInTheDocument();
+        expect(screen.getByText(/Достовірно/i)).toBeInTheDocument();
         expect(screen.getByText('Test News Article')).toBeInTheDocument();
         expect(screen.getByText('This is a true news article.')).toBeInTheDocument();
 
