@@ -13,8 +13,8 @@ class TestEndToEndRegression:
 
     def setup_method(self):
         self.client = APIClient()
-        self.check_url = reverse('check-news')
-        self.history_url = reverse('news-history')
+        self.check_url = reverse('news:check-news')
+        self.history_url = reverse('news:history')
 
     @patch('news.tasks.execute_pipeline')
     @patch('news.tasks.article_parser.parse_url')
@@ -24,7 +24,7 @@ class TestEndToEndRegression:
         Verify that a full news check request flows correctly through the system.
         Covers: API Reception -> DB Record Creation -> Celery Task -> Parser -> Pipeline -> Result Saving.
         """
-        # 1. Setup mocks
+        # 1. Setup mocks.
         settings.CELERY_TASK_ALWAYS_EAGER = True
         
         test_url = "https://regression-test.com/article-1"
@@ -32,7 +32,9 @@ class TestEndToEndRegression:
             'domain': 'regression-test.com',
             'reputation': 'unknown',
             'in_whitelist': False,
-            'in_blacklist': False
+            'in_blacklist': False,
+            'in_blacklist_manual': False,
+            'in_whitelist_manual': False
         }
         
         mock_parser.return_value = {
@@ -65,7 +67,7 @@ class TestEndToEndRegression:
         assert news_check.verdict == NewsCheck.VerdictChoices.FACT
         assert news_check.is_fake is False
         
-        # 4. Verify Parser Debug Info 
+        # 4. Verify Parser Debug Info
         debug_info = ParserDebugInfo.objects.get(news_check=news_check)
         assert debug_info.parsed_title == 'Regression Test Title'
 
@@ -77,7 +79,7 @@ class TestEndToEndRegression:
 
     def test_api_health_regression(self):
         """Ensure core API endpoints are alive."""
-        health_url = reverse('health-check')
+        health_url = reverse('news:health-check')
         response = self.client.get(health_url)
         assert response.status_code == 200
         assert response.data['status'] == 'healthy'
