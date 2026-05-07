@@ -751,26 +751,55 @@ def _filter_top_articles(
     scored_results: list[dict[str, Any]],
     threshold: float = 0.5,
     max_per_intent: int = 3,
+    fallback_count: int = 5,
 ) -> list[dict[str, Any]]:
     """
     Return a copy of *scored_results* where each intent's ``articles`` list
     contains only articles with ``cohere_score >= threshold``, capped at
     *max_per_intent* (best-scoring first).
 
+    If NO articles pass the threshold for a given intent, take the top
+    *fallback_count* articles anyway and mark each with ``low_relevance=True``
+    so downstream stages can add appropriate warnings.
+
     Used to pass a clean, concise evidence set to Stage 4.
     """
     filtered: list[dict[str, Any]] = []
     for item in scored_results:
+        all_articles = item.get("articles", [])
         passing = [
-            art for art in item.get("articles", [])
+            art for art in all_articles
             if art.get("cohere_score", 0.0) >= threshold
         ][:max_per_intent]
-        filtered.append({**item, "articles": passing})
+
+        if passing:
+            # Normal case: good articles found
+            filtered.append({**item, "articles": passing})
+        elif all_articles:
+            # Fallback: no article passed the threshold — take top-N anyway
+            # but flag them as low-relevance for the LLM prompts
+            fallback = sorted(
+                all_articles,
+                key=lambda a: a.get("cohere_score", 0.0),
+                reverse=True,
+            )[:fallback_count]
+            for art in fallback:
+                art["low_relevance"] = True
+            logger.warning(
+                "[Stage 3] Intent %s: no articles scored >= %.2f. "
+                "Falling back to top-%d low-relevance articles.",
+                item["intent_id"], threshold, len(fallback),
+            )
+            filtered.append({**item, "articles": fallback})
+        else:
+            # No articles at all (Tavily returned nothing)
+            filtered.append({**item, "articles": []})
 
     total = sum(len(i["articles"]) for i in filtered)
     logger.info(
-        "[Stage 3] Filter (threshold=%.2f, max=%d): %d article(s) kept across %d intent(s).",
-        threshold, max_per_intent, total, len(filtered),
+        "[Stage 3] Filter (threshold=%.2f, max=%d, fallback=%d): "
+        "%d article(s) kept across %d intent(s).",
+        threshold, max_per_intent, fallback_count, total, len(filtered),
     )
     return filtered
 
@@ -827,19 +856,34 @@ def _build_worker_user_prompt(
         text = intent["intent"]
         guid = intent["search_guidance"]
         arts = articles_by_id.get(iid, [])
+        has_low_relevance = any(art.get("low_relevance") for art in arts)
 
         art_lines: list[str] = []
-        for i, art in enumerate(arts[:3], start=1):
+        for i, art in enumerate(arts, start=1):
             body = (art.get("full_content") or art.get("content") or "").strip()
             body = body[:5000]
+            score_info = f"  Cohere Rerank Score: {art.get('cohere_score', 0.0):.4f}\n"
             art_lines.append(
                 f"  [Article {i}]\n"
-                f"  Title: {art.get('title', '(no title)')}\n"
-                f"  URL: {art.get('url', '')}\n"
+                f"  Title: {art.get('title') or '(no title)'}\n"
+                f"  URL: {art.get('url') or '(no url)'}\n"
+                f"{score_info}"
                 f"  Content:\n{body}"
             )
 
-        arts_text = ("\n\n".join(art_lines)) if art_lines else "  (no articles found for this claim)"
+        if not art_lines:
+            arts_text = "  (no articles found for this claim)"
+        elif has_low_relevance:
+            low_relevance_warning = (
+                "  ⚠️ WARNING: ALL ARTICLES BELOW HAVE VERY LOW RELEVANCE SCORES "
+                "AFTER COHERE RERANK (BELOW 0.5 THRESHOLD). BE EXTREMELY CAREFUL "
+                "WHEN ANALYZING THEM. THEY ARE LIKELY NOT SEMANTICALLY RELEVANT "
+                "TO THE CLAIM BEING VERIFIED. TREAT THIS EVIDENCE WITH HIGH "
+                "SKEPTICISM AND DO NOT DRAW STRONG CONCLUSIONS FROM IT."
+            )
+            arts_text = low_relevance_warning + "\n\n" + "\n\n".join(art_lines)
+        else:
+            arts_text = "\n\n".join(art_lines)
 
         intent_blocks.append(
             f"--- CLAIM [{iid}] ---\n"
@@ -1114,17 +1158,29 @@ def _build_judge_user_prompt(
         iid  = intent["intent_id"]
         text = intent["intent"]
         arts = articles_by_id.get(iid, [])
+        has_low_relevance = any(art.get("low_relevance") for art in arts)
 
         source_lines: list[str] = []
-        for src_num, art in enumerate(arts[:3], start=1):
+        for src_num, art in enumerate(arts, start=1):
             snippet = (
                 art.get("full_content") or art.get("content") or ""
             ).strip()[:1200]
+            score_note = f" (Cohere score: {art.get('cohere_score', 0.0):.4f})"
             source_lines.append(
-                f"  [Source {src_num}] URL: {art.get('url', '')}\n"
+                f"  [Source {src_num}] URL: {art.get('url', '')}{score_note}\n"
                 f"  Content: {snippet}"
             )
-        sources_text = "\n".join(source_lines) if source_lines else "  (no sources)"
+
+        if not source_lines:
+            sources_text = "  (no sources)"
+        elif has_low_relevance:
+            sources_text = (
+                "  ⚠️ WARNING: ALL SOURCES BELOW HAVE VERY LOW RELEVANCE SCORES "
+                "AFTER COHERE RERANK (BELOW 0.5 THRESHOLD). THEY ARE LIKELY NOT "
+                "SEMANTICALLY RELEVANT TO THIS CLAIM. TREAT WITH HIGH SKEPTICISM.\n"
+            ) + "\n" + "\n".join(source_lines)
+        else:
+            sources_text = "\n".join(source_lines)
 
         intent_blocks.append(
             f"=== CLAIM [{iid}]: {text} ===\n"

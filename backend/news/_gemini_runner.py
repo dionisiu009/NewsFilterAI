@@ -17,7 +17,6 @@ import os
 import sys
 import traceback
 
-# Обмеження на розмір stdin (байт)
 MAX_STDIN_BYTES = 200 * 1024  # 200 KB
 
 try:
@@ -48,7 +47,6 @@ if not prompt:
     print('Missing prompt in input', file=sys.stderr)
     sys.exit(2)
 
-# Перевірка ключа перед запитом
 api_key = os.environ.get('GEMINI_API_KEY')
 if not api_key:
     print('ERROR: GEMINI_API_KEY is not set in environment!', file=sys.stderr)
@@ -58,7 +56,6 @@ try:
     from google import genai
     from google.genai import types
 
-    # Ініціалізація клієнта
     client = genai.Client(api_key=api_key)
 
     config_kwargs = {}
@@ -72,7 +69,6 @@ try:
         **config_kwargs
     )
 
-    # Виклик SDK
     response = client.models.generate_content(
         model=model,
         contents=prompt,
@@ -88,7 +84,6 @@ try:
         except Exception:
             output_text = str(response)
 
-    # Вивід результату в stdout (UTF-8)
     if output_text is not None:
         try:
             sys.stdout.buffer.write(output_text.encode('utf-8'))
@@ -99,7 +94,6 @@ try:
     sys.exit(0)
 
 except Exception as e:
-    # ПРОФЕСІЙНА ДІАГНОСТИКА: Виводимо все, що знаємо про помилку
     print("\n" + "="*50, file=sys.stderr)
     print(f"GEMINI RUNNER EXCEPTION: {type(e).__name__}", file=sys.stderr)
     print(f"MESSAGE: {str(e)}", file=sys.stderr)

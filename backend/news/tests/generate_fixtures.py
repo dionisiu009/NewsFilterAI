@@ -3,7 +3,6 @@ import json
 from pathlib import Path
 import sys
 
-# Add backend directory to sys.path
 backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.insert(0, backend_dir)
 
@@ -26,7 +25,6 @@ def generate_markdown(file_path: Path):
     with open(file_path, 'r', encoding='utf-8') as f:
         html = f.read()
 
-    # Mock URL
     url = f"http://mock.local/{file_path.name}"
 
     md_content = f"# Парсинг результати для: {file_path.name}\n\n"

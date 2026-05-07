@@ -99,15 +99,14 @@ jobs:
            docker compose pull backend frontend
 
       - name: Run Backend Tests
-        # Запуск тестів (використовуємо docker compose run без explicit no-build для сумісності)
         env:
           IMAGE_TAG: sha-${{ github.sha }}
-        run: docker compose run --rm backend pytest
+        run: docker compose run --rm backend pytest news/tests/
 
       - name: Run Frontend Tests
         env:
           IMAGE_TAG: sha-${{ github.sha }}
-        run: docker compose run --rm frontend npm test
+        run: docker compose run --rm frontend npm run test -- --run
 
   # ============================================================================
   # 3. PROMOTE & DEPLOY - Тегування як 'latest' та деплой
@@ -149,4 +148,4 @@ jobs:
 
       - name: Trigger Deployment Webhook
         # Виклик вебхука (прибираємо --fail щоб бачити текст помилки при 400)
-        run: curl --retry 5 --retry-delay 15 --retry-connrefused -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}" # --retry or --fail
+        run: curl --retry 5 --retry-delay 15 --retry-connrefused -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
