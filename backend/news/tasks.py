@@ -8,6 +8,9 @@ import traceback
 from typing import Dict, Any
 from dataclasses import dataclass
 
+from django.utils import timezone
+from asgiref.sync import sync_to_async
+
 from celery import shared_task
 
 from .models import NewsCheck, ParserDebugInfo
@@ -99,14 +102,16 @@ def check_news_task(self, url: str, news_check_id: int) -> Dict[str, Any]:
         if domain_info['in_whitelist']:
             extra_context = f"\n\n[ПРИМІТКА: Джерело {domain} знаходиться у білому списку достовірних ЗМІ]"
 
-        def on_pipeline_progress(current_artifacts):
-            """Зберігаємо проміжні результати в БД"""
+        async def on_pipeline_progress(current_artifacts):
+            """Зберігаємо проміжні результати в БД (async-safe)."""
             try:
-                # Використовуємо .update() для уникнення проблем з конкурентністю та гонкою станів
-                # Хоча Celery task виконується послідовно в одному воркері
-                NewsCheck.objects.filter(id=news_check_id).update(
+                # sync_to_async дозволяє безпечно викликати синхронний Django ORM
+                # всередині async-контексту execute_pipeline
+                await sync_to_async(
+                    NewsCheck.objects.filter(id=news_check_id).update
+                )(
                     pipeline_artifacts=current_artifacts,
-                    updated_at=datetime.now()
+                    updated_at=timezone.now(),  # timezone-aware datetime
                 )
                 logger.info(f"Проміжні результати збережені ({len(current_artifacts)} файлів)")
             except Exception as e:
@@ -114,7 +119,6 @@ def check_news_task(self, url: str, news_check_id: int) -> Dict[str, Any]:
 
         import asyncio
         from .council_pipeline import execute_pipeline
-        from datetime import datetime
         
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
