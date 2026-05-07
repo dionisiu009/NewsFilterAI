@@ -2,7 +2,7 @@
 # NEWSFILTERAI - FRONTEND DOCKERFILE (React + Vite)
 # ==============================================================================
 
-FROM node:20-alpine
+FROM node:24-alpine
 
 # Встановлюємо робочу директорію
 WORKDIR /app
