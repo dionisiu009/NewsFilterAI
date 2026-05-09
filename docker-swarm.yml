@@ -16,7 +16,7 @@ services:
         - "traefik.enable=true"
         - "traefik.http.routers.newsfilter-frontend.rule=Host(`newsfilterai.pp.ua`)"
         - "traefik.http.routers.newsfilter-frontend.entrypoints=web"
-        - "traefik.http.services.newsfilter-frontend.loadbalancer.server.port=5173"
+        - "traefik.http.services.newsfilter-frontend.loadbalancer.server.port=80"
         - "traefik.docker.network=dokploy-network"
 
 

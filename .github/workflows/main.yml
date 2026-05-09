@@ -103,10 +103,16 @@ jobs:
           IMAGE_TAG: sha-${{ github.sha }}
         run: docker compose run --rm backend pytest news/tests/
 
+      - name: Setup Node for Frontend Tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Run Frontend Tests
-        env:
-          IMAGE_TAG: sha-${{ github.sha }}
-        run: docker compose run --rm frontend npm run test -- --run
+        run: |
+          cd frontend
+          npm ci
+          npm run test -- --run
 
   # ============================================================================
   # 3. PROMOTE & DEPLOY - Тегування як 'latest' та деплой
@@ -147,5 +153,7 @@ jobs:
              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}/frontend:sha-${{ github.sha }}
 
       - name: Trigger Deployment Webhook
-        # Виклик вебхука (прибираємо --fail щоб бачити текст помилки при 400)
-        run: curl --retry 5 --retry-delay 15 --retry-connrefused -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
+        run: |
+          curl --retry 5 --retry-delay 15 -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}" \
+          -H "Content-Type: application/json" \
+          -d "{\"ref\": \"${{ github.ref }}\"}"
