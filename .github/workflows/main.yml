@@ -120,7 +120,6 @@ jobs:
   deploy:
     name: Promote & Deploy
     needs: test
-    # Запускати тільки якщо це пуш в main/master (ігнорувати PR)
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     permissions:
