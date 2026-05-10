@@ -66,11 +66,10 @@ const ParserCard = ({ data, winnerData }) => {
         currentAuthors.some(a => winnerAuthors.includes(a))
     );
 
-    // Clean names
     const parserName = source ? source.charAt(0).toUpperCase() + source.slice(1) : 'Unknown';
     const hasData = text && text.length > 0;
 
-    const textPreviewLimit = 500;
+    const textPreviewLimit = 200;
     const shouldTruncate = text && text.length > textPreviewLimit;
 
     return (
@@ -170,7 +169,7 @@ const ParserComparisonModal = ({ isOpen, onClose, parsersDebug, winnerData }) =>
                     <h2 className="modal-title">
                         🔍 Parser Comparison
                         <span className="modal-subtitle">
-                            Compare results from 5 parallel parsers
+                            Compare results from {parsersDebug ? parsersDebug.length : 0} parallel parsers
                         </span>
                     </h2>
                     <button className="close-button" onClick={onClose}>&times;</button>

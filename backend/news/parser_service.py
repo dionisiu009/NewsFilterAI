@@ -34,9 +34,17 @@ USER_AGENT = (
     'Chrome/120.0.0.0 Safari/537.36'
 )
 
+
 def similar(a: str, b: str) -> float:
     """Повертає коефіцієнт схожості рядків (0.0 - 1.0)"""
     return SequenceMatcher(None, a, b).ratio()
+
+def normalize_whitespace(text: str) -> str:
+    if not text:
+        return text
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    lines = [line.rstrip() for line in text.split('\n')]
+    return '\n'.join(lines).strip()
 
 class BaseParser(ABC):
     """Абстрактний клас для парсера"""
@@ -65,9 +73,10 @@ class TrafilaturaParser(BaseParser):
                 return {}
             
             data = json.loads(extracted)
+            text = normalize_whitespace(data.get('text'))
             return {
                 'title': data.get('title'),
-                'text': data.get('text'),
+                'text': text,
                 'date': data.get('date'),
                 'image': data.get('image'),
                 'authors': data.get('author', '').split(',') if data.get('author') else [],
@@ -86,7 +95,7 @@ class NewspaperParser(BaseParser):
             
             return {
                 'title': article.title,
-                'text': article.text,
+                'text': normalize_whitespace(article.text),
                 'date': str(article.publish_date) if article.publish_date else None,
                 'image': article.top_image,
                 'authors': article.authors,
@@ -105,7 +114,7 @@ class ReadabilityParser(BaseParser):
             # Readability повертає HTML контент, треба його почистити
             summary_html = doc.summary()
             soup = BeautifulSoup(summary_html, 'html.parser')
-            text = soup.get_text(separator='\n\n')
+            text = normalize_whitespace(soup.get_text(separator='\n\n'))
             
             return {
                 'title': title,
@@ -126,7 +135,7 @@ class GooseParser(BaseParser):
             article = g.extract(raw_html=html)
             return {
                 'title': article.title,
-                'text': article.cleaned_text,
+                'text': normalize_whitespace(article.cleaned_text),
                 'date': article.publish_date,
                 'image': article.top_image.src if article.top_image else None,
                 'authors': article.authors,
@@ -169,7 +178,9 @@ class BS4Parser(BaseParser):
             # Text (Дуже примітивно - беремо всі P)
             # Це слабке місце, але як fallback може спрацювати для простих сторінок
             paragraphs = soup.find_all('p')
-            text = '\n\n'.join([p.get_text() for p in paragraphs if len(p.get_text().strip()) > 30])
+            text = normalize_whitespace(
+                '\n\n'.join([p.get_text() for p in paragraphs if len(p.get_text().strip()) > 30])
+            )
             
             return {
                 'title': title,
