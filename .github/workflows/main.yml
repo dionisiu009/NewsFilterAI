@@ -153,7 +153,12 @@ jobs:
 
       - name: Trigger Deployment Webhook
         run: |
-          curl --retry 5 --retry-delay 15 --fail -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}" \
+          curl --retry 5 --retry-delay 15 -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}" \
           -H "Content-Type: application/json" \
           -H "X-GitHub-Event: push" \
-          -d "{\"ref\": \"refs/heads/master\"}"
+          -d "{
+            \"ref\": \"refs/heads/master\",
+            \"environmentVariables\": {
+              \"IMAGE_TAG\": \"sha-${{ github.sha }}\"
+            }
+          }"
