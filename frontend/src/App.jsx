@@ -12,7 +12,8 @@ import {
   DebugToggle,
   InfoPage,
   DisinfoCards,
-  HistoryPage
+  HistoryPage,
+  CheckedSitesBlock
 } from './components';
 import { pagesContent } from './data/disinfoContent';
 import { useNewsCheck, CheckStatus } from './hooks/useNewsCheck';
@@ -106,6 +107,8 @@ function App() {
         if (currentView === 'home') {
           return (
             <>
+              <CheckedSitesBlock />
+
               <div className="features">
                 <h2 className="features-title">🚀 Як це працює?</h2>
                 <div className="features-grid">

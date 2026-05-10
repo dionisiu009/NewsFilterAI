@@ -9,3 +9,4 @@ export { default as DebugInfo } from './DebugInfo';
 export { InfoPage } from './InfoPage';
 export { DisinfoCards } from './DisinfoCards';
 export { default as HistoryPage } from './HistoryPage';
+export { default as CheckedSitesBlock } from './CheckedSitesBlock';
