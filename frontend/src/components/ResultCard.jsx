@@ -100,7 +100,19 @@ function ResultCard({ result, onReset, debugEnabled }) {
             <span className="info-icon">🌐</span>
             <div className="info-content">
               <span className="info-label">Джерело</span>
-              <span className="info-value">{result.source_domain}</span>
+              {result.url ? (
+                <a
+                  className="info-value info-value--link"
+                  href={result.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={result.url}
+                >
+                  {result.source_domain}
+                </a>
+              ) : (
+                <span className="info-value">{result.source_domain}</span>
+              )}
             </div>
           </div>
 

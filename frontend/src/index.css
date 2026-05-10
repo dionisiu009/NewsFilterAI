@@ -36,6 +36,8 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  /* Remove mobile blue tap highlight on ALL elements */
+  -webkit-tap-highlight-color: transparent;
 }
 
 html {
@@ -81,7 +83,12 @@ body {
   color: #fff;
 }
 
-/* Focus */
+/* Focus — remove default outline everywhere,
+   keep custom one only for keyboard navigation (:focus-visible) */
+:focus {
+  outline: none;
+}
+
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
@@ -111,6 +118,15 @@ code {
 button {
   font-family: inherit;
   cursor: pointer;
+  /* No blue outline on click */
+  outline: none;
+  /* Don't select button text on rapid clicks */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button:focus {
+  outline: none;
 }
 
 /* Inputs Reset */

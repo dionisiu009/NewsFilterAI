@@ -70,7 +70,7 @@ function isWithinTimeFilter(isoDate, filter) {
 // =====================================================================
 // Main Component
 // =====================================================================
-const CheckedSitesBlock = () => {
+const CheckedSitesBlock = ({ onCardClick }) => {
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -363,7 +363,7 @@ const CheckedSitesBlock = () => {
           {/* 2-row horizontal grid */}
           <div className="csb-grid" ref={gridRef}>
             {filteredItems.map(item => (
-              <SiteCard key={item.id} item={item} />
+              <SiteCard key={item.id} item={item} onCardClick={onCardClick} />
             ))}
           </div>
 
@@ -379,13 +379,20 @@ const CheckedSitesBlock = () => {
   );
 };
 
-const SiteCard = ({ item }) => {
+const SiteCard = ({ item, onCardClick }) => {
   const verdict = getVerdict(item.verdict);
   const domain = item.source_domain || '';
   const title = item.title || 'Без заголовка';
   const date = formatDate(item.created_at);
 
-  const handleOpen = () => {
+  // Клік на картку → показати сторінку результату
+  const handleCardClick = () => {
+    if (onCardClick && item.url) onCardClick(item.url);
+  };
+
+  // Клік на домен → відкрити оригінальну статтю в новій вкладці
+  const handleDomainClick = (e) => {
+    e.stopPropagation();
     if (item.url) window.open(item.url, '_blank', 'noopener,noreferrer');
   };
 
@@ -393,11 +400,11 @@ const SiteCard = ({ item }) => {
     <article
       className="csb-card"
       style={{ '--card-accent': verdict.color, '--card-bg': verdict.bg }}
-      onClick={handleOpen}
-      title={`Відкрити: ${item.url}`}
+      onClick={handleCardClick}
+      title="Переглянути результат аналізу"
       role="button"
       tabIndex={0}
-      onKeyDown={e => e.key === 'Enter' && handleOpen()}
+      onKeyDown={e => e.key === 'Enter' && handleCardClick()}
     >
       {/* Accent line */}
       <div className="csb-card-accent" />
@@ -413,7 +420,13 @@ const SiteCard = ({ item }) => {
 
       {/* Domain + date */}
       <div className="csb-card-meta">
-        <span className="csb-card-domain">🌐 {domain || '—'}</span>
+        <span
+          className="csb-card-domain csb-card-domain--link"
+          onClick={handleDomainClick}
+          title={`Відкрити статтю: ${item.url}`}
+        >
+          🌐 {domain || '—'}
+        </span>
         <span className="csb-card-date">{date}</span>
       </div>
 

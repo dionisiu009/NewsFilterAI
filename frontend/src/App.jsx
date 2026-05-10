@@ -107,7 +107,7 @@ function App() {
         if (currentView === 'home') {
           return (
             <>
-              <CheckedSitesBlock />
+              <CheckedSitesBlock onCardClick={handleSubmit} />
 
               <div className="features">
                 <h2 className="features-title">🚀 Як це працює?</h2>

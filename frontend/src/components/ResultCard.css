@@ -139,6 +139,21 @@
   word-break: break-word;
 }
 
+/* Clickable domain link in result card */
+.info-value--link {
+  display: inline-block;
+  color: #a78bfa;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(167, 139, 250, 0.35);
+  transition: color 0.15s, border-color 0.15s;
+  word-break: break-word;
+}
+
+.info-value--link:hover {
+  color: #c4b5fd;
+  border-bottom-color: rgba(196, 181, 253, 0.7);
+}
+
 /* Confidence Bar */
 .confidence-bar-wrapper {
   display: flex;
