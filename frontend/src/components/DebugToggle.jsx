@@ -14,9 +14,11 @@ import './DebugToggle.css';
 const DebugToggle = ({ enabled, onToggle, onHistoryClick }) => {
   return (
     <div className="debug-toggle-container">
-      <button className="history-link-btn" onClick={() => onHistoryClick()}>
-        📊 Історія (debug)
-      </button>
+      {enabled && (
+        <button className="history-link-btn" onClick={() => onHistoryClick()}>
+          📊 Історія (debug)
+        </button>
+      )}
       <div className="debug-toggle">
         <label className="debug-toggle__label">
           <input
